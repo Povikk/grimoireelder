@@ -1,0 +1,244 @@
+.school-page {
+  display: grid;
+  gap: 24px;
+}
+.school-hero,
+.magic-banner {
+  position: relative;
+  min-height: 310px;
+  overflow: hidden;
+  border: 1px solid #3e443d;
+  border-radius: 20px;
+  background: #090d0c;
+}
+.school-hero > img,
+.magic-banner > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.school-hero:after,
+.magic-banner:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #080b0aed 0%, #080b0abb 45%, transparent 78%),
+    linear-gradient(0deg, #080b0a99, transparent);
+}
+.school-hero > div,
+.magic-banner > div {
+  position: relative;
+  z-index: 2;
+  width: min(590px, 72%);
+  padding: 54px 48px;
+  color: #f4efe4;
+}
+.school-page small {
+  color: #d2aa37;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.school-hero h1 {
+  font:
+    500 50px Georgia,
+    serif;
+  margin: 11px 0;
+}
+.school-hero p,
+.magic-banner p {
+  color: #d0d2cb;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.school-hero span {
+  display: inline-block;
+  padding: 7px 10px;
+  border: 1px solid #d0ae5260;
+  border-radius: 999px;
+  color: #ddc780;
+  font-size: 11px;
+}
+.school-history {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.65fr) 1fr;
+  gap: 36px;
+  padding: 28px 30px;
+  border: 1px solid #353933;
+  border-radius: 16px;
+  background: #171816;
+}
+.school-history h2,
+.school-heading h2 {
+  font:
+    500 27px Georgia,
+    serif;
+  margin: 8px 0 0;
+  color: #f2eee5;
+}
+.school-history p {
+  color: #aead9f;
+  line-height: 1.75;
+  margin: 0;
+}
+.school-history p b {
+  float: left;
+  color: #c79d27;
+  font:
+    500 45px/35px Georgia,
+    serif;
+  padding: 4px 8px 0 0;
+}
+.school-heading {
+  margin-top: 8px;
+}
+.school-houses {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.school-houses article {
+  position: relative;
+  overflow: hidden;
+  min-height: 210px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--house), #30322e 55%);
+  border-top: 3px solid var(--house);
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--house), #151614 84%),
+    #151614 55%
+  );
+}
+.school-houses article:after {
+  content: '';
+  position: absolute;
+  right: -35px;
+  top: -35px;
+  width: 110px;
+  height: 110px;
+  border: 1px solid color-mix(in srgb, var(--house), transparent 65%);
+  border-radius: 50%;
+}
+.school-houses span {
+  color: color-mix(in srgb, var(--house), white 25%);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.school-houses h3 {
+  font:
+    600 24px Georgia,
+    serif;
+  color: #f1ede4;
+  margin: 16px 0 9px;
+}
+.school-houses p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #aeaea4;
+  margin: 0;
+}
+.magic-banner {
+  min-height: 240px;
+}
+.magic-banner > div {
+  padding-block: 42px;
+}
+.magic-banner h2 {
+  font:
+    500 34px Georgia,
+    serif;
+  margin: 10px 0;
+  color: #f4efe4;
+}
+.place-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.place-grid article,
+.outside-grid article {
+  display: flex;
+  gap: 13px;
+  padding: 18px;
+  border: 1px solid #32352f;
+  border-left: 3px solid var(--place-accent, #b18a31);
+  border-radius: 12px;
+  background: #171816;
+}
+.place-grid svg,
+.outside-grid svg {
+  flex: 0 0 18px;
+  width: 18px;
+  color: var(--place-accent, #b18a31);
+}
+.place-grid h3,
+.outside-grid h3 {
+  font:
+    600 17px Georgia,
+    serif;
+  color: #eee9df;
+  margin: 5px 0 7px;
+}
+.place-grid p,
+.outside-grid p {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #a5a69d;
+  margin: 0;
+}
+.outside-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.outside-grid article:first-child {
+  --place-accent: #d8524e;
+}
+.outside-grid article:nth-child(2) {
+  --place-accent: #4d8ddd;
+}
+.outside-grid article:nth-child(3) {
+  --place-accent: #b18a3f;
+}
+@media (max-width: 1100px) {
+  .school-houses {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .place-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .school-hero {
+    min-height: 350px;
+  }
+  .school-hero > div,
+  .magic-banner > div {
+    width: 100%;
+    padding: 42px 24px;
+  }
+  .school-hero h1 {
+    font-size: 40px;
+  }
+  .school-history {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 22px;
+  }
+  .school-houses,
+  .place-grid,
+  .outside-grid {
+    grid-template-columns: 1fr;
+  }
+  .magic-banner {
+    min-height: 300px;
+  }
+}
