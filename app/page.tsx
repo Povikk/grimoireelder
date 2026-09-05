@@ -2301,7 +2301,9 @@ function Editor({
                 let cursor = 0;
                 correctionReview.forEach((match, index) => {
                   parts.push(d.text.slice(cursor, match.offset));
-                  parts.push(<mark className={acceptedCorrections.has(index) ? 'accepted' : ''} key={`${match.offset}-${index}`}>{d.text.slice(match.offset, match.offset + match.length)}</mark>);
+                  const before = d.text.slice(match.offset, match.offset + match.length);
+                  const after = match.replacements[0].value;
+                  parts.push(<mark className={acceptedCorrections.has(index) ? 'accepted' : ''} data-change={`Avant : ${before}  →  Après : ${after}`} key={`${match.offset}-${index}`}>{after}</mark>);
                   cursor = match.offset + match.length;
                 });
                 parts.push(d.text.slice(cursor));
