@@ -11,6 +11,7 @@ import {
   Dices,
   ImagePlus,
   LayoutDashboard,
+  Link2,
   LockKeyhole,
   LogIn,
   MapPin,
@@ -93,6 +94,7 @@ type Note = {
   boardY?: number;
   boardWidth?: number;
   boardHeight?: number;
+  connections?: string[];
   noteColor?: 'or' | 'violet' | 'bleu' | 'vert' | 'rose';
   tasks?: { id: string; text: string; done: boolean }[];
   details?: string[][];
@@ -2172,6 +2174,38 @@ function MagicBoard({ notes, update, remove, add }: {
   add: () => void;
 }) {
   const colors: NonNullable<Note['noteColor']>[] = ['or', 'violet', 'bleu', 'vert', 'rose'];
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [boardSize, setBoardSize] = useState({ width: 1, height: 1 });
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+    const measure = () => setBoardSize({ width: board.clientWidth, height: board.clientHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, []);
+  const centerOf = (note: Note) => ({
+    x: ((note.boardX ?? 8) / 100) * boardSize.width + (note.boardWidth || 230) / 2,
+    y: ((note.boardY ?? 10) / 100) * boardSize.height + (note.boardHeight || 190) / 2,
+  });
+  const links = notes.flatMap((source) => (source.connections || []).map((targetId) => ({ source, target: notes.find((note) => note.id === targetId) })).filter((link): link is { source: Note; target: Note } => !!link.target));
+  const chooseConnection = (target: Note) => {
+    if (!linkingId) {
+      setLinkingId(target.id);
+      return;
+    }
+    if (linkingId === target.id) {
+      setLinkingId(null);
+      return;
+    }
+    const source = notes.find((note) => note.id === linkingId);
+    if (!source) return setLinkingId(null);
+    const connected = source.connections?.includes(target.id);
+    update({ ...source, connections: connected ? source.connections?.filter((id) => id !== target.id) : [...(source.connections || []), target.id] });
+    setLinkingId(null);
+  };
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, note: Note) => {
     if ((event.target as HTMLElement).closest('button,input,textarea')) return;
     const board = event.currentTarget.closest('.chalk-board') as HTMLElement | null;
@@ -2221,11 +2255,20 @@ function MagicBoard({ notes, update, remove, add }: {
   };
   return <section className="magic-board-page">
     <header><div><small>CARNET DE TRAVERSE</small><h1>Notes diverses</h1><p>Écris librement, puis déplace tes pensées sur le tableau.</p></div><button onClick={add}><Plus /> Ajouter une note</button></header>
-    <div className="chalk-board">
+    <div className={`chalk-board${linkingId ? ' is-linking' : ''}`} ref={boardRef}>
       <span className="chalk-sigil">✦　☾　✧</span>
+      {linkingId && <div className="linking-hint"><Link2 /><span><b>Première cellule choisie</b>Clique sur la chaîne d’une autre cellule pour les relier.</span><button onClick={() => setLinkingId(null)}>Annuler</button></div>}
+      <svg className="mind-links" width="100%" height="100%" aria-label="Connexions entre les notes">
+        {links.map(({ source, target }) => {
+          const from = centerOf(source), to = centerOf(target);
+          const curve = Math.max(36, Math.min(115, Math.abs(to.x - from.x) * .2));
+          const path = `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
+          return <g key={`${source.id}-${target.id}`} className="mind-link" onClick={() => { if (confirm(`Supprimer le lien entre « ${source.title} » et « ${target.title} » ?`)) update({ ...source, connections: source.connections?.filter((id) => id !== target.id) }); }}><path className="mind-link-glow" d={path} /><path className="mind-link-line" d={path} /><title>{source.title} ↔ {target.title} · Cliquer pour supprimer</title></g>;
+        })}
+      </svg>
       {!notes.length && <button className="board-empty" onClick={add}><StickyNote /><b>Le tableau attend tes premières pensées</b><small>Ajouter une note magique</small></button>}
       {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}`} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%`, width: `${note.boardWidth || 230}px`, height: `${note.boardHeight || 190}px` }} key={note.id}>
-        <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button aria-label="Changer la couleur" title="Changer la couleur" onClick={() => { const index = colors.indexOf(note.noteColor || 'or'); update({ ...note, noteColor: colors[(index + 1) % colors.length] }); }} /><button aria-label="Supprimer la note" title="Supprimer" onClick={() => confirm('Effacer cette note ?') && remove(note.id)}><X /></button></div>
+        <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button aria-label="Changer la couleur" title="Changer la couleur" onClick={() => { const index = colors.indexOf(note.noteColor || 'or'); update({ ...note, noteColor: colors[(index + 1) % colors.length] }); }} /><button className={linkingId === note.id ? 'link-active' : ''} aria-label="Relier cette note" title={linkingId === note.id ? 'Annuler la liaison' : 'Relier à une autre note'} onClick={() => chooseConnection(note)}><Link2 /></button><button aria-label="Supprimer la note" title="Supprimer" onClick={() => confirm('Effacer cette note ?') && remove(note.id)}><X /></button></div>
         <input value={note.title} onChange={(event) => update({ ...note, title: event.target.value })} placeholder="Titre de la note" />
         <textarea value={note.text} onChange={(event) => update({ ...note, text: event.target.value })} placeholder="Écris quelque chose…" />
         <button className="note-resize" type="button" aria-label="Redimensionner la note" title="Agrandir ou réduire" onPointerDown={(event) => startResize(event, note)}>↘</button>

@@ -2250,3 +2250,59 @@ html.grimoire-ready body::before { display: none; }
   overflow-wrap: anywhere;
 }
 @media(max-width:720px){.fiche-overlay .facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Connexions de carte mentale */
+.mind-links {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.mind-link { pointer-events: stroke; cursor: pointer; }
+.mind-link path { fill: none; }
+.mind-link-glow {
+  stroke: rgba(var(--house-rgb), .22);
+  stroke-width: 9;
+  filter: blur(5px);
+}
+.mind-link-line {
+  stroke: color-mix(in srgb,var(--house) 64%,#77958a);
+  stroke-width: 1.7;
+  stroke-dasharray: 5 6;
+  filter: drop-shadow(0 0 4px rgba(var(--house-rgb), .6));
+  animation: mind-link-flow 9s linear infinite;
+}
+.mind-link:hover .mind-link-glow { stroke: rgba(var(--house-rgb), .42); }
+.mind-link:hover .mind-link-line { stroke: #f1d98d; stroke-width: 2.5; }
+@keyframes mind-link-flow { to { stroke-dashoffset: -44; } }
+.chalk-board.is-linking .magic-note { box-shadow: 0 16px 30px #0006, 0 0 25px color-mix(in srgb,var(--note) 16%,transparent); }
+.note-handle button.link-active {
+  border-color: var(--note);
+  background: color-mix(in srgb,var(--note) 22%,#10231d);
+  color: #fff4cf;
+  box-shadow: 0 0 13px color-mix(in srgb,var(--note) 32%,transparent);
+}
+.linking-hint {
+  position: sticky;
+  z-index: 12;
+  top: 12px;
+  left: 50%;
+  width: min(440px, calc(100% - 28px));
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px auto 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--house-rgb), .45);
+  border-radius: 11px;
+  background: #091914f2;
+  color: #dce5e0;
+  box-shadow: 0 12px 30px #0008, 0 0 24px rgba(var(--house-rgb), .1);
+}
+.linking-hint > svg { width: 18px; color: var(--house); }
+.linking-hint span { display: grid; flex: 1; font-size: 11px; color: #91a49a; }
+.linking-hint b { color: #ece7dc; font-size: 12px; }
+.linking-hint button { padding: 7px 9px; border: 1px solid #ffffff18; border-radius: 7px; background: #ffffff08; color: #bbc9c2; }
+@media(prefers-reduced-motion:reduce){.mind-link-line{animation:none}}
