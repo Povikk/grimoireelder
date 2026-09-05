@@ -546,10 +546,15 @@ export default function Home() {
       essential: false,
     });
   const mainCharacter = notes.find((note) => note.id === 'joueur');
-  const characterName = mainCharacter?.title?.split(' ')[0] || 'voyageur';
   const characterReady =
     !!mainCharacter?.title &&
     !['Nom à définir', 'Mon personnage'].includes(mainCharacter.title);
+  const characterName = characterReady
+    ? mainCharacter.title.trim().split(/\s+/)[0]
+    : profileName.trim().split(/\s+/)[0];
+  const characterCount = notes.filter(
+    (note) => note.kind === 'Personnage' && (note.id !== 'joueur' || characterReady),
+  ).length;
   const closeTour = () => {
     localStorage.setItem('elderwood-onboarding-done', 'true');
     setTourOpen(false);
@@ -934,10 +939,12 @@ export default function Home() {
                     <div>
                       <small>ARCHIVES PERSONNELLES · ANNÉE I</small>
                       <h1>
-                        {greeting}, {characterName}.
+                        {characterName
+                          ? `${greeting}, ${characterName}.`
+                          : `${greeting} dans ton grimoire.`}
                       </h1>
                       <p>
-                        {notes.filter((n) => n.kind === 'Personnage').length}{' '}
+                        {characterCount}{' '}
                         personnage · {notes.filter((n) => n.kind === 'Lieu').length}{' '}
                         lieux · {notes.filter((n) => n.kind === 'Projet').length}{' '}
                         projet
