@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Compass,
   Dices,
-  Download,
   ImagePlus,
   LayoutDashboard,
   LockKeyhole,
@@ -26,7 +25,6 @@ import {
   Sparkles,
   Star,
   Trash2,
-  Upload,
   Users,
   WandSparkles,
   X,
@@ -638,31 +636,6 @@ export default function Home() {
           );
         }
       });
-  const exportGrimoire = () => {
-    const blob = new Blob([JSON.stringify({ version: 1, notes }, null, 2)], {
-      type: 'application/json',
-    });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `elderwood-grimoire-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-  const importGrimoire = (file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result));
-        const imported = Array.isArray(parsed) ? parsed : parsed.notes;
-        if (!Array.isArray(imported)) throw new Error();
-        setNotes(mergeCanonicalPlaces(imported));
-      } catch {
-        alert('Ce fichier ne semble pas être une sauvegarde Elderwood valide.');
-      }
-    };
-    reader.readAsText(file);
-  };
   return (
     <main>
       <aside className={menu ? 'side on' : 'side'}>
@@ -774,20 +747,6 @@ export default function Home() {
               : 'Connecte-toi pour créer ton grimoire personnel.'}
           </span>
         </div>
-        {currentUser && <div className="vault-actions">
-          <button onClick={exportGrimoire} title="Exporter une sauvegarde">
-            <Download /> Sauvegarder
-          </button>
-          <label title="Restaurer une sauvegarde">
-            <Upload /> Restaurer
-            <input
-              hidden
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) => importGrimoire(event.target.files?.[0])}
-            />
-          </label>
-        </div>}
       </aside>
       <section className="work">
         <header>
