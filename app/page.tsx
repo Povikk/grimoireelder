@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
   BookOpen,
@@ -76,6 +76,7 @@ type Note = {
   status?: string;
   relation?: 'Inconnue' | 'Neutre' | 'Allié' | 'Rival' | 'Famille';
   house?: CharacterHouse;
+  age?: number;
   schoolYear?: SchoolYear;
   knowledge?:
     | 'Connu en RP'
@@ -112,6 +113,7 @@ const initial: Note[] = [
     essential: true,
     status: 'À approfondir',
     relation: 'Neutre',
+    age: 15,
     schoolYear: 'Première année',
     imageSize: 100,
   },
@@ -126,6 +128,7 @@ const corvinCharacter: Note = {
   essential: true,
   status: 'À approfondir',
   relation: 'Neutre',
+  age: 15,
   schoolYear: 'Première année',
   imageSize: 100,
   details: [
@@ -505,7 +508,7 @@ export default function Home() {
         source: 'Fiche' as const,
         section: item.kind,
         title: item.title,
-        excerpt: item.text || item.sub,
+        excerpt: richPlainText(item.text) || item.sub,
         tags: item.tags,
         item,
         score: searchScore(
@@ -1149,7 +1152,7 @@ export default function Home() {
                       <div>
                         <small>{n.kind}</small>
                         <h3>{n.title}</h3>
-                        <p>{n.text}</p>
+                        <p>{richPlainText(n.text)}</p>
                         <Tags tags={n.tags} onPick={setQ} />
                       </div>
                       <ChevronRight />
@@ -1235,6 +1238,9 @@ export default function Home() {
                 {open.kind === 'Personnage' && (
                   <span><b>Année</b>{open.schoolYear || 'Non renseignée'}</span>
                 )}
+                {open.kind === 'Personnage' && open.age && (
+                  <span><b>Âge</b>{open.age} ans</span>
+                )}
                 {open.kind === 'Connaissance' && open.knowledge && (
                   <span>
                     <b>Connaissance</b>
@@ -1256,7 +1262,7 @@ export default function Home() {
                   setOpen(null);
                 }}
               />
-              <p className="intro">{open.text}</p>
+              <div className="intro rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(open.text) }} />
               {open.kind === 'Sort' && open.incantation && (
                 <section className="spell-incantation"><small>INCANTATION</small><p>{open.incantation}</p></section>
               )}
@@ -1309,7 +1315,7 @@ export default function Home() {
               {open.details?.map((d) => (
                 <section key={d[0]}>
                   <h3>{d[0]}</h3>
-                  <p>{d[1]}</p>
+                  <div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(d[1]) }} />
                 </section>
               ))}
               <div className="actions">
@@ -1496,7 +1502,7 @@ function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, cl
   const [section, setSection] = useState(seed?.kind || 'Communauté');
   const [title, setTitle] = useState(seed?.title || '');
   const [subtitle, setSubtitle] = useState(seed?.sub || '');
-  const [content, setContent] = useState(seed ? [seed.text, ...(seed.details || []).map((detail) => `${detail[0]}\n${detail[1]}`)].filter(Boolean).join('\n\n') : '');
+  const [content, setContent] = useState(seed ? [richPlainText(seed.text), ...(seed.details || []).map((detail) => `${detail[0]}\n${richPlainText(detail[1])}`)].filter(Boolean).join('\n\n') : '');
   const [source, setSource] = useState(seed?.source || '');
   const [publicConsent, setPublicConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2178,6 +2184,63 @@ function MagicBoard({ notes, update, remove, add }: {
     </div>
   </section>;
 }
+const escapeRichText = (value: string) => value
+  .replace(/&(?!(?:amp|lt|gt|quot|#39|nbsp);)/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+function richPlainText(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[2-4]|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+function safeRichHtml(value: string) {
+  if (!value) return '';
+  if (!/<[^>]+>/.test(value)) return escapeRichText(value).replace(/\n/g, '<br>');
+  const allowed = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'blockquote', 'div']);
+  return value.split(/(<[^>]*>)/g).map((part) => {
+    if (!part.startsWith('<')) return escapeRichText(part);
+    const match = part.match(/^<\s*(\/?)\s*([a-z0-9]+)/i);
+    if (!match || !allowed.has(match[2].toLowerCase())) return '';
+    const tag = match[2].toLowerCase();
+    return tag === 'br' ? '<br>' : `<${match[1] ? '/' : ''}${tag}>`;
+  }).join('');
+}
+function RichTextEditor({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder?: string }) {
+  const editor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (editor.current && editor.current.innerHTML !== safeRichHtml(value))
+      editor.current.innerHTML = safeRichHtml(value);
+  }, [value]);
+  const command = (name: string, commandValue?: string) => {
+    editor.current?.focus();
+    document.execCommand(name, false, commandValue);
+    if (editor.current) onChange(editor.current.innerHTML);
+  };
+  return <div className="rich-editor">
+    <div className="rich-toolbar" aria-label="Mise en forme du texte">
+      <button type="button" title="Gras" onMouseDown={(e) => { e.preventDefault(); command('bold'); }}><b>B</b></button>
+      <button type="button" title="Italique" onMouseDown={(e) => { e.preventDefault(); command('italic'); }}><i>I</i></button>
+      <button type="button" title="Souligné" onMouseDown={(e) => { e.preventDefault(); command('underline'); }}><u>U</u></button>
+      <span />
+      <button type="button" title="Titre" onMouseDown={(e) => { e.preventDefault(); command('formatBlock', 'h3'); }}>Titre</button>
+      <button type="button" title="Paragraphe" onMouseDown={(e) => { e.preventDefault(); command('formatBlock', 'p'); }}>Texte</button>
+      <button type="button" title="Citation" onMouseDown={(e) => { e.preventDefault(); command('formatBlock', 'blockquote'); }}>❝</button>
+      <span />
+      <button type="button" title="Liste à puces" onMouseDown={(e) => { e.preventDefault(); command('insertUnorderedList'); }}>• Liste</button>
+      <button type="button" title="Liste numérotée" onMouseDown={(e) => { e.preventDefault(); command('insertOrderedList'); }}>1. Liste</button>
+      <button type="button" title="Annuler" onMouseDown={(e) => { e.preventDefault(); command('undo'); }}>↶</button>
+      <button type="button" title="Effacer la mise en forme" onMouseDown={(e) => { e.preventDefault(); command('removeFormat'); }}>Tx</button>
+    </div>
+    <div ref={editor} className="rich-surface" contentEditable suppressContentEditableWarning data-placeholder={placeholder} onInput={(e) => onChange(e.currentTarget.innerHTML)} onPaste={(e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }} />
+  </div>;
+}
 function Editor({
   note,
   cancel,
@@ -2394,6 +2457,10 @@ function Editor({
                   {schoolYears.map((year) => <option value={year} key={year}>{year}</option>)}
                 </select>
               </label>
+              <label>
+                Âge
+                <input type="number" min="1" max="999" inputMode="numeric" value={d.age || ''} placeholder="Ex. 15" onChange={(e) => setD({ ...d, age: e.target.value ? Number(e.target.value) : undefined })} />
+              </label>
             </>
           )}
           {d.kind === 'Connaissance' && (
@@ -2457,12 +2524,8 @@ function Editor({
             </label>
           )}
           <label className="wide">
-            <span className="notes-label"><span>Notes</span><button type="button" className="correct-notes" disabled={correcting || !d.text.trim()} onClick={correctNotes}><SpellCheck2 />{correcting ? 'Correction…' : 'Corriger les fautes'}</button></span>
-            <textarea
-              rows={6}
-              value={d.text}
-              onChange={(e) => { setD({ ...d, text: e.target.value }); setCorrectionReview([]); setAcceptedCorrections(new Set()); setSelectedReplacements({}); }}
-            />
+            <span className="notes-label"><span>Notes principales</span><button type="button" className="correct-notes" title={/<[^>]+>/.test(d.text) ? 'Retire la mise en forme pour utiliser le correcteur automatique.' : undefined} disabled={correcting || !d.text.trim() || /<[^>]+>/.test(d.text)} onClick={correctNotes}><SpellCheck2 />{correcting ? 'Correction…' : 'Corriger les fautes'}</button></span>
+            <RichTextEditor value={d.text} placeholder="Écris le résumé principal de cette fiche…" onChange={(text) => { setD({ ...d, text }); setCorrectionReview([]); setAcceptedCorrections(new Set()); setSelectedReplacements({}); }} />
             {!!correctionReview.length && <section className="correction-workshop">
               <div className="correction-preview">{(() => {
                 const parts: React.ReactNode[] = [];
@@ -2484,6 +2547,22 @@ function Editor({
             {correctionMessage && <small className="correction-message">{correctionMessage}</small>}
             <small className="correction-privacy">Le texte est envoyé à <a href="https://languagetool.org" target="_blank" rel="noreferrer">LanguageTool</a> uniquement lorsque tu demandes une correction.</small>
           </label>
+          <fieldset className="wide detail-editor">
+            <legend>Catégories de la fiche</legend>
+            <p>Ajoute des chapitres comme « Histoire », « Caractère » ou « Anecdotes ».</p>
+            {(d.details || []).map((detail, index) => (
+              <article key={index}>
+                <div className="detail-heading">
+                  <input aria-label="Titre de la catégorie" value={detail[0]} placeholder="Titre de la catégorie" onChange={(e) => setD({ ...d, details: d.details?.map((item, itemIndex) => itemIndex === index ? [e.target.value, item[1]] : item) })} />
+                  <button type="button" disabled={index === 0} title="Monter" onClick={() => { const next = [...(d.details || [])]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setD({ ...d, details: next }); }}>↑</button>
+                  <button type="button" disabled={index === (d.details || []).length - 1} title="Descendre" onClick={() => { const next = [...(d.details || [])]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; setD({ ...d, details: next }); }}>↓</button>
+                  <button type="button" title="Supprimer la catégorie" aria-label="Supprimer la catégorie" onClick={() => setD({ ...d, details: d.details?.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></button>
+                </div>
+                <RichTextEditor value={detail[1]} placeholder="Contenu de cette catégorie…" onChange={(text) => setD({ ...d, details: d.details?.map((item, itemIndex) => itemIndex === index ? [item[0], text] : item) })} />
+              </article>
+            ))}
+            <button type="button" className="add-detail" onClick={() => setD({ ...d, details: [...(d.details || []), ['Nouvelle catégorie', '']] })}><Plus /> Ajouter une catégorie</button>
+          </fieldset>
           {(d.kind === 'Connaissance' || d.kind === 'Sort') && (
             <label className="wide">
               {d.kind === 'Sort' ? 'Source d’apprentissage' : 'Comment mon personnage l’a appris'}
