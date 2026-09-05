@@ -1513,14 +1513,21 @@ function AuthPanel({
         if (error) throw error;
         cancel();
       } else {
+        const emailRedirectTo =
+          window.location.hostname === 'localhost'
+            ? 'https://povikk.github.io/grimoireelder/'
+            : new URL(import.meta.env.BASE_URL, window.location.origin).href;
         const { data, error } = await client.auth.signUp({
           email,
           password,
-          options: { data: { display_name: draft.trim() || email.split('@')[0] } },
+          options: {
+            data: { display_name: draft.trim() || email.split('@')[0] },
+            emailRedirectTo,
+          },
         });
         if (error) throw error;
         if (data.session) cancel();
-        else setMessage('Compte créé. Vérifie maintenant ta boîte mail.');
+        else setMessage('Ton grimoire est scellé. Ouvre la lettre reçue par mail pour l’activer.');
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Connexion impossible.');
