@@ -568,6 +568,11 @@ export default function Home() {
               <div className="search-results">
                 {globalResults.map((result, index) => (
                   <button
+                    className={
+                      result.source === 'Fiche' && (result.item as Note).image
+                        ? 'has-search-photo'
+                        : undefined
+                    }
                     key={`${result.source}-${result.section}-${result.title}-${index}`}
                     onClick={() => {
                       if (result.source === 'Fiche') {
@@ -577,6 +582,14 @@ export default function Home() {
                       setSearchOpen(result);
                     }}
                   >
+                    {result.source === 'Fiche' &&
+                      (result.item as Note).image && (
+                        <img
+                          className="search-thumb"
+                          src={(result.item as Note).image}
+                          alt={`Aperçu de ${result.title}`}
+                        />
+                      )}
                     <span
                       className={`search-source source-${result.source.toLowerCase().replace('è', 'e')}`}
                     >
