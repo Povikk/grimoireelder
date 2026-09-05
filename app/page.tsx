@@ -7,7 +7,6 @@ import {
   Camera,
   Castle,
   ChevronRight,
-  CircleHelp,
   Compass,
   Dices,
   Download,
@@ -756,7 +755,8 @@ export default function Home() {
           <button className="hamb" onClick={() => setMenu(!menu)}>
             <Menu />
           </button>
-          <label>
+          <label className="grimoire-searchbar">
+            <Sparkles className="search-spark" />
             <Search />
             <input
               id="grimoire-search"
@@ -770,7 +770,7 @@ export default function Home() {
               </button>
             )}
           </label>
-          <div className="theme-control">
+          <div className="header-actions"><div className="theme-control">
             <button
               className={`theme-toggle theme-${theme}`}
               onClick={() => setThemeOpen((value) => !value)}
@@ -808,22 +808,12 @@ export default function Home() {
               </>
             )}
           </div>
-          <button
-            className="help-toggle"
-            onClick={() => {
-              setTourStep(0);
-              setTourOpen(true);
-            }}
-            aria-label="Découvrir le fonctionnement du grimoire"
-            title="Comment fonctionne le grimoire ?"
-          >
-            <CircleHelp />
-          </button>
           {currentUser && !['Règlement', 'Lore', 'Elderwood'].includes(section) && (
             <button className="primary" onClick={add}>
               <Plus /> Nouvelle fiche
             </button>
           )}
+          </div>
         </header>
         <div className="content">
           {q.trim() ? (
@@ -1585,7 +1575,7 @@ function WelcomeTour({
             <div className="tour-mark"><Compass /></div>
             <small>TON PREMIER PAS</small>
             <h2>Que veux-tu faire maintenant&nbsp;?</h2>
-            <p>Tu pourras relancer ce guide avec le bouton <CircleHelp /> en haut.</p>
+            <p>Le guide se termine ici. Les archives resteront ensuite entièrement à ta disposition.</p>
             <div className="tour-choices">
               <button onClick={createCharacter}>
                 <Users /><span><b>Créer mon personnage</b><small>Compléter ma fiche principale</small></span><ChevronRight />
