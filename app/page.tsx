@@ -318,12 +318,20 @@ export default function Home() {
       setAuthResolved(true);
     }).catch(() => setAuthResolved(true));
     const { data } = client.auth.onAuthStateChange((event, session) => {
-      if (session?.user)
-        document.documentElement.classList.remove('grimoire-ready');
-      setCloudReady(false);
-      setCurrentUser(session?.user || null);
-      if (event === 'SIGNED_IN') setSection('Toutes');
-      if (event === 'SIGNED_OUT') setSection('Accueil');
+      if (event === 'SIGNED_IN' && session?.user) {
+        setCurrentUser((existing) => {
+          if (existing?.id === session.user.id) return existing;
+          document.documentElement.classList.remove('grimoire-ready');
+          setCloudReady(false);
+          return session.user;
+        });
+        setSection('Toutes');
+      }
+      if (event === 'SIGNED_OUT') {
+        setCloudReady(false);
+        setCurrentUser(null);
+        setSection('Accueil');
+      }
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
         setAuthOpen(true);
