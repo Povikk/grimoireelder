@@ -318,7 +318,7 @@ export default function Home() {
       setAuthResolved(true);
     }).catch(() => setAuthResolved(true));
     const { data } = client.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN')
+      if (session?.user)
         document.documentElement.classList.remove('grimoire-ready');
       setCloudReady(false);
       setCurrentUser(session?.user || null);
@@ -400,12 +400,18 @@ export default function Home() {
   }, [currentUser]);
   useEffect(() => {
     const ready = authResolved && (!currentUser || cloudReady || syncState === 'error');
-    if (!ready) return;
-    requestAnimationFrame(() =>
+    if (!ready) {
+      document.documentElement.classList.remove('grimoire-ready');
+      return;
+    }
+    const reveal = window.setTimeout(() => {
       requestAnimationFrame(() =>
-        document.documentElement.classList.add('grimoire-ready'),
-      ),
-    );
+        requestAnimationFrame(() =>
+          document.documentElement.classList.add('grimoire-ready'),
+        ),
+      );
+    }, 650);
+    return () => window.clearTimeout(reveal);
   }, [authResolved, currentUser, cloudReady, syncState]);
   useEffect(() => {
     loadWikiSubmissions(currentUser).then(setWikiEntries).catch(() => setWikiEntries([]));

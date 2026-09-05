@@ -1899,7 +1899,8 @@ html[data-theme] .tags span[role='button']:focus {
 .facts .house-fact.venatrix::before { background: #9862d4; }
 
 /* Chargement sans flash du profil ou du thème par défaut. */
-html:not(.grimoire-ready) body > main {
+html:not(.grimoire-ready) body > main,
+html:not(.grimoire-ready) #root > main {
   opacity: 0;
 }
 html:not(.grimoire-ready) body::before {
@@ -1919,7 +1920,8 @@ html:not(.grimoire-ready) body::before {
   transform: translate(-50%, -50%) rotate(0deg);
   animation: grimoire-awaken .8s ease-in-out infinite alternate;
 }
-html.grimoire-ready body > main {
+html.grimoire-ready body > main,
+html.grimoire-ready #root > main {
   animation: grimoire-reveal .24s ease-out both;
 }
 html.grimoire-ready body::before { display: none; }

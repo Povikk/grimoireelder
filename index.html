@@ -8,6 +8,7 @@
     <title>Elderwood · Grimoire des Résonants</title>
     <script>
       (function () {
+        document.documentElement.classList.remove('grimoire-ready');
         try {
           var theme = localStorage.getItem('elderwood-house-theme');
           if (!['aerwyn', 'brumval', 'falcon', 'venatrix'].includes(theme)) theme = 'falcon';
