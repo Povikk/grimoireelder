@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071813" />
+    <meta name="description" content="Le grimoire privé des Résonants d’Elderwood." />
+    <title>Elderwood · Grimoire des Résonants</title>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('elderwood-house-theme');
+          if (!['aerwyn', 'brumval', 'falcon', 'venatrix'].includes(theme)) theme = 'falcon';
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          document.documentElement.dataset.theme = 'falcon';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/github-main.tsx"></script>
+  </body>
+</html>

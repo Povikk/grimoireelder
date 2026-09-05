@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
 import {
   BookOpen,
   BriefcaseBusiness,
@@ -31,6 +32,13 @@ import {
 } from 'lucide-react';
 import { rules, ruleSections } from './rules';
 import { lore, loreSections } from './lore';
+import {
+  getSupabase,
+  isSupabaseConfigured,
+  loadPrivateNotes,
+  replacePrivateNotes,
+  updateProfileName,
+} from '@/lib/supabase';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
 const characterHouses: CharacterHouse[] = [
@@ -54,6 +62,7 @@ type Note = {
   text: string;
   tags: string[];
   image?: string;
+  imagePath?: string;
   imageSize?: number;
   essential?: boolean;
   status?: 'À découvrir' | 'En cours' | 'Confirmé' | 'Archivé';
@@ -248,6 +257,9 @@ export default function Home() {
     [greeting, setGreeting] = useState('Bienvenue'),
     [authOpen, setAuthOpen] = useState(false),
     [profileName, setProfileName] = useState(''),
+    [currentUser, setCurrentUser] = useState<User | null>(null),
+    [cloudReady, setCloudReady] = useState(false),
+    [syncState, setSyncState] = useState<'local' | 'syncing' | 'synced' | 'error'>('local'),
     [tourOpen, setTourOpen] = useState(false),
     [tourStep, setTourStep] = useState(0);
   useEffect(() => {
@@ -287,6 +299,59 @@ export default function Home() {
     );
   }, []);
   useEffect(() => {
+    const client = getSupabase();
+    if (!client) return;
+    client.auth.getSession().then(({ data }) =>
+      setCurrentUser(data.session?.user || null),
+    );
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      setCloudReady(false);
+      setCurrentUser(session?.user || null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+  useEffect(() => {
+    if (!currentUser) {
+      setCloudReady(false);
+      setSyncState('local');
+      return;
+    }
+    let active = true;
+    const openCloudGrimoire = async () => {
+      setSyncState('syncing');
+      try {
+        const remote = (await loadPrivateNotes(currentUser)) as Note[];
+        if (!active) return;
+        if (remote.length) {
+          setNotes(mergeCanonicalPlaces(remote));
+        } else {
+          const saved = localStorage.getItem('elderwood-grimoire');
+          const local = saved ? (JSON.parse(saved) as Note[]) : initial;
+          const personal = local.filter((note) => !note.id.startsWith('elderwood-'));
+          await replacePrivateNotes(currentUser, personal);
+          if (!active) return;
+          setNotes(mergeCanonicalPlaces(personal));
+        }
+        const identity =
+          currentUser.user_metadata?.display_name ||
+          currentUser.email?.split('@')[0] ||
+          '';
+        if (identity) {
+          setProfileName(identity);
+          localStorage.setItem('elderwood-profile-name', identity);
+        }
+        setCloudReady(true);
+        setSyncState('synced');
+      } catch {
+        if (active) setSyncState('error');
+      }
+    };
+    openCloudGrimoire();
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+  useEffect(() => {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (!finePointer.matches || reducedMotion.matches) return;
@@ -313,6 +378,22 @@ export default function Home() {
     () => localStorage.setItem('elderwood-grimoire', JSON.stringify(notes)),
     [notes],
   );
+  useEffect(() => {
+    if (!currentUser || !cloudReady) return;
+    const timer = window.setTimeout(async () => {
+      setSyncState('syncing');
+      try {
+        await replacePrivateNotes(
+          currentUser,
+          notes.filter((note) => !note.id.startsWith('elderwood-')),
+        );
+        setSyncState('synced');
+      } catch {
+        setSyncState('error');
+      }
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [notes, currentUser, cloudReady]);
   useEffect(() => {
     if (!q.trim()) {
       setSearchSource('Tout');
@@ -528,12 +609,20 @@ export default function Home() {
         </div>
         <button className="account-gate" onClick={() => setAuthOpen(true)}>
           <span className="account-avatar">
-            {profileName ? profileName.slice(0, 1).toUpperCase() : <LogIn />}
+            {currentUser || profileName ? profileName.slice(0, 1).toUpperCase() || <LogIn /> : <LogIn />}
           </span>
           <span className="account-copy">
-            <small>{profileName ? 'IDENTITÉ SCELLÉE' : 'ACCÈS PERSONNEL'}</small>
+            <small>{currentUser ? 'GRIMOIRE SYNCHRONISÉ' : profileName ? 'IDENTITÉ LOCALE' : 'ACCÈS PERSONNEL'}</small>
             <b>{profileName || 'Ouvrir mon grimoire'}</b>
-            <em>{profileName ? 'Données locales' : 'Se connecter'}</em>
+            <em>
+              {currentUser
+                ? syncState === 'syncing'
+                  ? 'Synchronisation…'
+                  : syncState === 'error'
+                    ? 'Synchronisation interrompue'
+                    : 'Compte Supabase'
+                : 'Se connecter'}
+            </em>
           </span>
           <ChevronRight />
         </button>
@@ -598,11 +687,17 @@ export default function Home() {
           Elderwood<em>15</em>
         </button>
         <div className="local">
-          <Sparkles />
+          {currentUser ? <LockKeyhole /> : <Sparkles />}
           <span>
-            <b>Mémoire locale</b>
+            <b>{currentUser ? 'Coffre privé en ligne' : 'Mémoire locale'}</b>
             <br />
-            Les fiches restent dans ce navigateur.
+            {currentUser
+              ? syncState === 'syncing'
+                ? 'Synchronisation en cours…'
+                : syncState === 'error'
+                  ? 'Les données locales restent disponibles.'
+                  : 'Tes fiches suivent ton compte.'
+              : 'Connecte-toi pour synchroniser tes fiches.'}
           </span>
         </div>
         <div className="vault-actions">
@@ -818,7 +913,7 @@ export default function Home() {
                 <>
                   <section className="hero">
                     <img
-                      src="/elderwood-archive.png"
+                      src={`${import.meta.env.BASE_URL}elderwood-archive.png`}
                       alt="Académie magique dans une forêt nocturne"
                     />
                     <div>
@@ -1256,10 +1351,13 @@ export default function Home() {
       {authOpen && (
         <AuthPanel
           name={profileName}
+          user={currentUser}
+          configured={isSupabaseConfigured}
           cancel={() => setAuthOpen(false)}
-          save={(name) => {
+          save={async (name) => {
             setProfileName(name);
             localStorage.setItem('elderwood-profile-name', name);
+            if (currentUser) await updateProfileName(currentUser, name);
             setAuthOpen(false);
           }}
         />
@@ -1387,14 +1485,49 @@ function WelcomeTour({
 }
 function AuthPanel({
   name,
+  user,
+  configured,
   cancel,
   save,
 }: {
   name: string;
+  user: User | null;
+  configured: boolean;
   cancel: () => void;
-  save: (name: string) => void;
+  save: (name: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(name);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const authenticate = async () => {
+    const client = getSupabase();
+    if (!client) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      if (mode === 'login') {
+        const { error } = await client.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        cancel();
+      } else {
+        const { data, error } = await client.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: draft.trim() || email.split('@')[0] } },
+        });
+        if (error) throw error;
+        if (data.session) cancel();
+        else setMessage('Compte créé. Vérifie maintenant ta boîte mail.');
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Connexion impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div
       className="overlay auth-overlay"
@@ -1409,42 +1542,54 @@ function AuthPanel({
           <span>✦</span>
         </div>
         <small>LE SCEAU DU PROPRIÉTAIRE</small>
-        <h2>Ouvre ton grimoire</h2>
-        <p>
-          Choisis l’identité affichée sur cet appareil. Tes notes restent privées
-          dans ton navigateur pour le moment.
-        </p>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = draft.trim();
-            if (value) save(value);
-          }}
-        >
-          <label htmlFor="grimoire-name">Nom ou pseudonyme</label>
-          <div className="auth-input">
-            <Sparkles />
-            <input
-              id="grimoire-name"
-              autoFocus
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Ex. Corvin"
-              maxLength={40}
-            />
+        <h2>{user ? 'Ton grimoire est ouvert' : 'Ouvre ton grimoire'}</h2>
+        {!configured ? (
+          <div className="auth-future auth-warning">
+            <LockKeyhole />
+            <span>
+              <b>Supabase attend ses deux clés</b>
+              <small>Ajoute l’URL du projet et la clé publique dans le fichier .env.local.</small>
+            </span>
           </div>
-          <button className="auth-submit" disabled={!draft.trim()}>
-            {name ? 'Mettre à jour mon sceau' : 'Sceller mon grimoire'}
-            <ChevronRight />
-          </button>
-        </form>
-        <div className="auth-future">
-          <LockKeyhole />
-          <span>
-            <b>Compte en ligne bientôt disponible</b>
-            <small>Connexion sécurisée et synchronisation entre appareils.</small>
-          </span>
-        </div>
+        ) : user ? (
+          <>
+            <p className="auth-connected">Connecté avec <b>{user.email}</b>. Tes fiches et tes images sont privées et synchronisées.</p>
+            <form onSubmit={async (event) => { event.preventDefault(); if (draft.trim()) await save(draft.trim()); }}>
+              <label htmlFor="grimoire-name">Nom affiché</label>
+              <div className="auth-input">
+                <Sparkles />
+                <input id="grimoire-name" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={40} />
+              </div>
+              <button className="auth-submit" disabled={busy || !draft.trim()}>Mettre à jour mon sceau <ChevronRight /></button>
+            </form>
+            <button className="auth-signout" onClick={async () => { setBusy(true); await getSupabase()?.auth.signOut(); setBusy(false); cancel(); }}>
+              Fermer la session sur cet appareil
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="auth-tabs" role="tablist">
+              <button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage(''); }}>Connexion</button>
+              <button className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage(''); }}>Créer un compte</button>
+            </div>
+            <form onSubmit={(event) => { event.preventDefault(); authenticate(); }}>
+              {mode === 'signup' && (
+                <>
+                  <label htmlFor="grimoire-name">Nom affiché</label>
+                  <div className="auth-input"><Sparkles /><input id="grimoire-name" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ex. Corvin" maxLength={40} /></div>
+                </>
+              )}
+              <label htmlFor="grimoire-email">Adresse e-mail</label>
+              <div className="auth-input"><LogIn /><input id="grimoire-email" type="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} placeholder="sorcier@exemple.fr" required /></div>
+              <label htmlFor="grimoire-password">Mot de passe</label>
+              <div className="auth-input"><LockKeyhole /><input id="grimoire-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>
+              {message && <p className="auth-message">{message}</p>}
+              <button className="auth-submit" disabled={busy || !email || password.length < 8}>
+                {busy ? 'Ouverture…' : mode === 'login' ? 'Entrer dans mon grimoire' : 'Créer mon grimoire'} <ChevronRight />
+              </button>
+            </form>
+          </>
+        )}
       </section>
     </div>
   );
@@ -1598,7 +1743,7 @@ function ElderwoodView({ query }: { query: string }) {
   return (
     <section className="school-page">
       <section className="school-hero">
-        <img src="/launcher-library-clean.png" alt="Bibliothèque d’Elderwood" />
+        <img src={`${import.meta.env.BASE_URL}launcher-library-clean.png`} alt="Bibliothèque d’Elderwood" />
         <div>
           <small>L’ÉCOLE</small>
           <h1>Elderwood</h1>
@@ -1638,7 +1783,7 @@ function ElderwoodView({ query }: { query: string }) {
       </section>
       <section className="magic-banner">
         <img
-          src="/launcher-magic-hall.png"
+          src={`${import.meta.env.BASE_URL}launcher-magic-hall.png`}
           alt="Grand hall magique d’Elderwood"
         />
         <div>

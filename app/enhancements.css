@@ -1118,7 +1118,7 @@
   background-image:
     linear-gradient(180deg, #071c1adb 0%, #09211fde 46%, #071a18f2 100%),
     linear-gradient(90deg, transparent, #071c1a5e 76%, #071c1ae8),
-    url('/sidebar-arcana.webp');
+    url('/grimoireelder/sidebar-arcana.webp');
   background-position: center, center, left bottom;
   background-repeat: no-repeat;
   background-size: cover, cover, auto 100%;
@@ -1279,6 +1279,7 @@
 .auth-card h2 { margin: 8px 0 10px; color: #f3f0e8; font: 42px/1.05 Georgia, serif; }
 .auth-card > p { margin: 0 0 25px; color: #afc0b8; line-height: 1.55; }
 .auth-card form label { display: block; margin-bottom: 8px; color: #d9c994; font-size: 12px; font-weight: 700; }
+.auth-card form .auth-input + label { margin-top: 14px; }
 .auth-input {
   height: 52px;
   display: flex;
@@ -1324,6 +1325,41 @@
 .auth-future span { display: flex; flex-direction: column; }
 .auth-future b { color: #d6dfda; font-size: 12px; }
 .auth-future small { font-size: 10px; }
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 20px 0 18px;
+  padding: 4px;
+  border: 1px solid #3b574e;
+  border-radius: 14px;
+  background: #07151199;
+}
+.auth-tabs button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  color: #91a89e;
+  background: transparent;
+  font-weight: 750;
+}
+.auth-tabs button.active {
+  color: #f6e8b9;
+  background: linear-gradient(135deg, #245244, #173c33);
+  box-shadow: inset 0 0 0 1px #d3b45d4d;
+}
+.auth-connected { margin-bottom: 22px !important; }
+.auth-message { margin: 12px 0 0; color: #efc56e; font-size: 13px; }
+.auth-signout {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #6a4747;
+  border-radius: 12px;
+  color: #e5b9b9;
+  background: #361c1c66;
+}
+.auth-warning { margin-top: 22px; }
 @media (max-width: 700px) {
   .auth-card { padding: 32px 24px 24px; }
   .auth-card h2 { font-size: 34px; }
@@ -1588,7 +1624,7 @@ html[data-theme] .side {
   background-image:
     linear-gradient(180deg, color-mix(in srgb, var(--house-deep) 82%, transparent), rgba(5, 17, 14, .93)),
     linear-gradient(90deg, transparent, rgba(4, 15, 12, .52) 72%, rgba(4, 15, 12, .92)),
-    url('/sidebar-arcana.webp');
+    url('/grimoireelder/sidebar-arcana.webp');
   border-right-color: rgba(var(--house-rgb), .24);
   box-shadow: inset -18px 0 32px #00110ec9, 12px 0 45px rgba(var(--house-rgb), .08);
 }
