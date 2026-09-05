@@ -257,6 +257,7 @@ export default function Home() {
     [greeting, setGreeting] = useState('Bienvenue'),
     [authOpen, setAuthOpen] = useState(false),
     [passwordRecovery, setPasswordRecovery] = useState(false),
+    [authNotice, setAuthNotice] = useState(''),
     [profileName, setProfileName] = useState(''),
     [currentUser, setCurrentUser] = useState<User | null>(null),
     [cloudReady, setCloudReady] = useState(false),
@@ -300,6 +301,10 @@ export default function Home() {
     );
   }, []);
   useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const query = new URLSearchParams(window.location.search);
+    const isSignupConfirmation =
+      hash.get('type') === 'signup' || query.get('type') === 'signup';
     const client = getSupabase();
     if (!client) return;
     client.auth.getSession().then(({ data }) =>
@@ -311,6 +316,11 @@ export default function Home() {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
         setAuthOpen(true);
+      }
+      if (event === 'SIGNED_IN' && isSignupConfirmation) {
+        setAuthNotice('Ton grimoire est bien scellé !');
+        window.setTimeout(() => setAuthNotice(''), 5200);
+        window.history.replaceState({}, '', window.location.pathname);
       }
     });
     return () => data.subscription.unsubscribe();
@@ -1370,6 +1380,16 @@ export default function Home() {
             setAuthOpen(false);
           }}
         />
+      )}
+      {authNotice && (
+        <div className="auth-notice" role="status" aria-live="polite">
+          <span><Sparkles /></span>
+          <div>
+            <small>LE SCEAU A RÉPONDU</small>
+            <b>{authNotice}</b>
+            <p>Bienvenue dans tes archives, Résonant.</p>
+          </div>
+        </div>
       )}
       {edit && (
         <Editor
