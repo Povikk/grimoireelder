@@ -70,7 +70,7 @@ type Note = {
   imagePath?: string;
   imageSize?: number;
   essential?: boolean;
-  status?: 'À découvrir' | 'En cours' | 'Confirmé' | 'Archivé';
+  status?: string;
   relation?: 'Inconnue' | 'Neutre' | 'Allié' | 'Rival' | 'Famille';
   house?: CharacterHouse;
   knowledge?:
@@ -100,7 +100,7 @@ const initial: Note[] = [
     text: 'Cette page attend encore son histoire.',
     tags: ['Élève', 'Résonant'],
     essential: true,
-    status: 'À découvrir',
+    status: 'À approfondir',
     relation: 'Neutre',
     imageSize: 100,
   },
@@ -113,7 +113,7 @@ const corvinCharacter: Note = {
   text: "Jeune Résonant britannique, sociable, joueur et observateur. Corvin aime moins gagner que l’instant où le résultat n’existe pas encore. Il garde toujours sur lui la vieille pièce confiée par son père.",
   tags: ['Élève', 'Résonant', 'Jeux', 'Hasard', 'À suivre'],
   essential: true,
-  status: 'À découvrir',
+  status: 'À approfondir',
   relation: 'Neutre',
   imageSize: 100,
   details: [
@@ -158,6 +158,12 @@ const icons = {
   Lieu: MapPin,
   Connaissance: BookOpen,
   Projet: BriefcaseBusiness,
+};
+const statusesByKind: Record<Kind, string[]> = {
+  Personnage: ['À rencontrer', 'Rencontré', 'À approfondir', 'Proche', 'Perdu de vue'],
+  Lieu: ['À découvrir', 'Visité', 'À explorer', 'Important', 'Dangereux'],
+  Connaissance: ['À vérifier', 'Soupçonné', 'Confirmé', 'Contredit', 'Obsolète'],
+  Projet: ['Idée', 'À préparer', 'En cours', 'En attente', 'Terminé', 'Abandonné'],
 };
 
 const normalizeSearch = (value: string) =>
@@ -539,7 +545,7 @@ export default function Home() {
       sub: '',
       text: '',
       tags: [],
-      status: 'À découvrir',
+      status: statusesByKind[section === 'Toutes' ? 'Personnage' : (section as Kind)][0],
       relation: 'Inconnue',
       imageSize: 100,
       essential: false,
@@ -552,7 +558,7 @@ export default function Home() {
       sub: '',
       text: '',
       tags: [],
-      status: kind === 'Projet' ? 'En cours' : 'À découvrir',
+      status: statusesByKind[kind][0],
       relation: 'Inconnue',
       imageSize: 100,
       essential: false,
@@ -2194,7 +2200,10 @@ function Editor({
             Type
             <select
               value={d.kind}
-              onChange={(e) => setD({ ...d, kind: e.target.value as Kind })}
+              onChange={(e) => {
+                const kind = e.target.value as Kind;
+                setD({ ...d, kind, status: statusesByKind[kind][0] });
+              }}
             >
               {Object.keys(icons).map((x) => (
                 <option key={x}>{x}</option>
@@ -2204,12 +2213,12 @@ function Editor({
           <label>
             Statut
             <select
-              value={d.status || 'À découvrir'}
+              value={d.status || statusesByKind[d.kind][0]}
               onChange={(e) =>
                 setD({ ...d, status: e.target.value as Note['status'] })
               }
             >
-              {['À découvrir', 'En cours', 'Confirmé', 'Archivé'].map((x) => (
+                  {statusesByKind[d.kind].map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
