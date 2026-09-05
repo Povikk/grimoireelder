@@ -453,6 +453,7 @@ export default function Home() {
             onClick={() => {
               setSection(s);
               setMenu(false);
+              setQ('');
             }}
             key={s}
           >
