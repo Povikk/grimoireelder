@@ -2023,3 +2023,24 @@ html.grimoire-ready body::before { display: none; }
   color: rgba(var(--house-rgb), .48);
   font-size: 8px;
 }
+
+/* Dérive organique des halos autour des fenêtres */
+.overlay::before {
+  animation: modal-halo-drift 28s linear infinite !important;
+}
+.overlay::after {
+  animation: modal-glimmer-drift 21s linear infinite !important;
+}
+@keyframes modal-halo-drift {
+  0%, 100% { transform: translate3d(-7%, -4%, 0) rotate(-7deg) scale(1.02); }
+  17% { transform: translate3d(3%, -9%, 0) rotate(-1deg) scale(1.07); }
+  39% { transform: translate3d(9%, 1%, 0) rotate(7deg) scale(1.01); }
+  58% { transform: translate3d(2%, 10%, 0) rotate(13deg) scale(.97); }
+  79% { transform: translate3d(-10%, 5%, 0) rotate(3deg) scale(1.05); }
+}
+@keyframes modal-glimmer-drift {
+  0%, 100% { opacity: .1; transform: translate3d(-3px, 2px, 0) scale(1); }
+  24% { opacity: .2; transform: translate3d(6px, -5px, 0) scale(1.006); }
+  47% { opacity: .13; transform: translate3d(10px, 4px, 0) scale(.996); }
+  73% { opacity: .22; transform: translate3d(-4px, 8px, 0) scale(1.008); }
+}
