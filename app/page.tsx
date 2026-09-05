@@ -222,6 +222,10 @@ export default function Home() {
     [searchOpen, setSearchOpen] = useState<SearchDetail | null>(null),
     [edit, setEdit] = useState<Note | null>(null),
     [menu, setMenu] = useState(false),
+    [searchSource, setSearchSource] = useState<
+      'Tout' | 'Fiche' | 'Lore' | 'Règle'
+    >('Tout'),
+    [searchTag, setSearchTag] = useState('Tous'),
     [dark, setDark] = useState(true),
     [greeting, setGreeting] = useState('Bienvenue');
   useEffect(() => {
@@ -277,6 +281,12 @@ export default function Home() {
     [notes],
   );
   useEffect(() => {
+    if (!q.trim()) {
+      setSearchSource('Tout');
+      setSearchTag('Tous');
+    }
+  }, [q]);
+  useEffect(() => {
     if (!open && !edit && !searchOpen) return;
     const previousOverflow = document.body.style.overflow;
     const previousPadding = document.body.style.paddingRight;
@@ -324,6 +334,7 @@ export default function Home() {
         section: item.kind,
         title: item.title,
         excerpt: item.text || item.sub,
+        tags: item.tags,
         item,
         score: searchScore(
           q,
@@ -336,6 +347,7 @@ export default function Home() {
         section: item.section,
         title: item.title,
         excerpt: item.text,
+        tags: [] as string[],
         item,
         score: searchScore(
           q,
@@ -348,6 +360,7 @@ export default function Home() {
         section: item.section,
         title: item.title,
         excerpt: item.text,
+        tags: [] as string[],
         item,
         score: searchScore(
           q,
@@ -359,6 +372,22 @@ export default function Home() {
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
   }, [notes, q]);
+  const searchTags = useMemo(
+    () =>
+      [...new Set(globalResults.flatMap((result) => result.tags))].sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [globalResults],
+  );
+  const filteredGlobalResults = useMemo(
+    () =>
+      globalResults.filter(
+        (result) =>
+          (searchSource === 'Tout' || result.source === searchSource) &&
+          (searchTag === 'Tous' || result.tags.includes(searchTag)),
+      ),
+    [globalResults, searchSource, searchTag],
+  );
   const add = () =>
     setEdit({
       id: crypto.randomUUID(),
@@ -562,12 +591,62 @@ export default function Home() {
                   <h2>Résultats pour « {q} »</h2>
                 </div>
                 <span>
-                  {globalResults.length} résultat
-                  {globalResults.length !== 1 && 's'}
+                  {filteredGlobalResults.length} résultat
+                  {filteredGlobalResults.length !== 1 && 's'}
                 </span>
               </div>
+              <div className="search-filters" aria-label="Filtres de recherche">
+                <div>
+                  <b>Afficher</b>
+                  {(['Tout', 'Fiche', 'Lore', 'Règle'] as const).map(
+                    (source) => (
+                      <button
+                        className={searchSource === source ? 'active' : ''}
+                        onClick={() => {
+                          setSearchSource(source);
+                          if (source !== 'Tout' && source !== 'Fiche')
+                            setSearchTag('Tous');
+                        }}
+                        key={source}
+                      >
+                        {source === 'Tout'
+                          ? 'Tout'
+                          : source === 'Fiche'
+                            ? 'Mes fiches'
+                            : `${source}s`}
+                        <span>
+                          {source === 'Tout'
+                            ? globalResults.length
+                            : globalResults.filter(
+                                (result) => result.source === source,
+                              ).length}
+                        </span>
+                      </button>
+                    ),
+                  )}
+                </div>
+                {!!searchTags.length &&
+                  (searchSource === 'Tout' || searchSource === 'Fiche') && (
+                    <div>
+                      <b>Tags</b>
+                      {['Tous', ...searchTags].map((tag) => (
+                        <button
+                          className={
+                            searchTag === tag
+                              ? 'active tag-filter'
+                              : 'tag-filter'
+                          }
+                          onClick={() => setSearchTag(tag)}
+                          key={tag}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
               <div className="search-results">
-                {globalResults.map((result, index) => (
+                {filteredGlobalResults.map((result, index) => (
                   <button
                     className={
                       result.source === 'Fiche' && (result.item as Note).image
@@ -604,11 +683,13 @@ export default function Home() {
                     <ChevronRight />
                   </button>
                 ))}
-                {!globalResults.length && (
+                {!filteredGlobalResults.length && (
                   <div className="empty">
                     <Search />
-                    <h3>Aucune trace trouvée</h3>
-                    <p>Essaie un nom, une maison, un lieu ou un terme RP.</p>
+                    <h3>Aucun résultat avec ces filtres</h3>
+                    <p>
+                      Essaie un autre filtre, un nom, un lieu ou un terme RP.
+                    </p>
                   </div>
                 )}
               </div>
