@@ -2053,6 +2053,7 @@ function Editor({
 }) {
   const [d, setD] = useState(note);
   const [imageOptimizing, setImageOptimizing] = useState(false);
+  const [imageDragging, setImageDragging] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [correctionMessage, setCorrectionMessage] = useState('');
   const tagChoices = [
@@ -2121,7 +2122,28 @@ function Editor({
   return (
     <div className="overlay center">
       <form
-        className="editor"
+        className={`editor${imageDragging ? ' image-dragging' : ''}`}
+        onDragEnter={(event) => {
+          if (Array.from(event.dataTransfer.items).some((item) => item.kind === 'file')) {
+            event.preventDefault();
+            setImageDragging(true);
+          }
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+          setImageDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+            setImageDragging(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setImageDragging(false);
+          const dropped = Array.from(event.dataTransfer.files).find((file) => file.type.startsWith('image/'));
+          if (dropped) image(dropped);
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           if (d.title.trim()) {
@@ -2139,6 +2161,7 @@ function Editor({
           }
         }}
       >
+        {imageDragging && <div className="editor-dropveil"><ImagePlus /><b>Dépose l’image dans le grimoire</b><span>Elle sera optimisée automatiquement en WebP</span></div>}
         <div className="edithead">
           <div>
             <small>NOUVELLE ENTRÉE</small>
@@ -2392,11 +2415,6 @@ function Editor({
           </label>
           <label
             className="wide file"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              image(e.dataTransfer.files[0]);
-            }}
           >
             <ImagePlus />
             {imageOptimizing ? 'Optimisation en cours…' : 'Choisir une image'}
