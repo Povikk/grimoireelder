@@ -2333,6 +2333,53 @@ function RichTextEditor({ value, onChange, placeholder }: { value: string; onCha
     <div ref={editor} className="rich-surface" contentEditable suppressContentEditableWarning data-placeholder={placeholder} onInput={(e) => onChange(e.currentTarget.innerHTML)} onPaste={(e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }} />
   </div>;
 }
+type LanguageMatch = { offset: number; length: number; message: string; replacements: { value: string }[] };
+function CorrectableRichEditor({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder?: string }) {
+  const [matches, setMatches] = useState<LanguageMatch[]>([]);
+  const [accepted, setAccepted] = useState<Set<number>>(new Set());
+  const [choices, setChoices] = useState<Record<number, number>>({});
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const formatted = /<[^>]+>/.test(value);
+  const check = async () => {
+    setBusy(true);
+    setMessage('Analyse de la plume…');
+    try {
+      const body = new URLSearchParams({ text: value, language: 'fr', enabledOnly: 'false' });
+      const response = await fetch('https://api.languagetool.org/v2/check', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+      if (!response.ok) throw new Error('Le correcteur ne répond pas pour le moment.');
+      const result = await response.json();
+      const found = (result.matches || []).filter((match: LanguageMatch) => match.replacements?.[0]).sort((a: LanguageMatch, b: LanguageMatch) => a.offset - b.offset).filter((match: LanguageMatch, index: number, all: LanguageMatch[]) => index === 0 || match.offset >= all[index - 1].offset + all[index - 1].length);
+      setMatches(found);
+      setAccepted(new Set());
+      setChoices({});
+      setMessage(found.length ? `${found.length} proposition${found.length > 1 ? 's' : ''} à vérifier.` : 'Aucune faute détectée.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Correction impossible.');
+    } finally { setBusy(false); }
+  };
+  const apply = () => {
+    let corrected = value;
+    matches.map((match, index) => ({ match, index })).filter(({ index }) => accepted.has(index)).sort((a, b) => b.match.offset - a.match.offset).forEach(({ match, index }) => {
+      const replacement = match.replacements[choices[index] || 0].value;
+      corrected = corrected.slice(0, match.offset) + replacement + corrected.slice(match.offset + match.length);
+    });
+    onChange(corrected);
+    setMessage(`${accepted.size} correction${accepted.size > 1 ? 's appliquées' : ' appliquée'}.`);
+    setMatches([]); setAccepted(new Set()); setChoices({});
+  };
+  return <div className="correctable-rich">
+    <div className="rich-correction-bar"><button type="button" className="correct-notes" disabled={busy || !value.trim() || formatted} title={formatted ? 'Retire la mise en forme pour utiliser le correcteur automatique.' : undefined} onClick={check}><SpellCheck2 />{busy ? 'Correction…' : 'Corriger les fautes'}</button></div>
+    <RichTextEditor value={value} onChange={(text) => { onChange(text); setMatches([]); setAccepted(new Set()); setChoices({}); }} placeholder={placeholder} />
+    {!!matches.length && <section className="correction-workshop compact-corrections">
+      <div className="correction-preview">{(() => { const parts: React.ReactNode[] = []; let cursor = 0; matches.forEach((match, index) => { parts.push(value.slice(cursor, match.offset)); const before = value.slice(match.offset, match.offset + match.length); const after = match.replacements[choices[index] || 0].value; parts.push(<mark className={accepted.has(index) ? 'accepted' : ''} data-change={`Avant : ${before}  →  Après : ${after}`} key={`${match.offset}-${index}`}>{after}</mark>); cursor = match.offset + match.length; }); parts.push(value.slice(cursor)); return parts; })()}</div>
+      <div className="correction-head"><div><small>PROPOSITIONS DE LA PLUME</small><b>{accepted.size}/{matches.length} validées</b></div><button type="button" onClick={() => setAccepted(new Set(matches.map((_, index) => index)))}><Check /> Tout valider</button></div>
+      <div className="correction-list">{matches.map((match, index) => <article className={accepted.has(index) ? 'correction-choice accepted' : 'correction-choice'} key={`${match.offset}-${index}`}><button type="button" className="correction-main" onClick={() => setAccepted((current) => { const next = new Set(current); next.has(index) ? next.delete(index) : next.add(index); return next; })}><del>{value.slice(match.offset, match.offset + match.length)}</del><ChevronRight /><ins>{match.replacements[choices[index] || 0].value}</ins><span>{accepted.has(index) ? 'Validée' : 'Valider'}</span></button>{match.replacements.length > 1 && <div className="correction-alternatives">{match.replacements.slice(0, 4).map((replacement, replacementIndex) => <button type="button" className={(choices[index] || 0) === replacementIndex ? 'selected' : ''} onClick={() => setChoices((current) => ({ ...current, [index]: replacementIndex }))} key={replacementIndex}>{replacement.value}</button>)}</div>}</article>)}</div>
+      <footer><button type="button" onClick={() => { setMatches([]); setMessage('Corrections ignorées.'); }}>Ignorer</button><button type="button" className="apply-corrections" disabled={!accepted.size} onClick={apply}><SpellCheck2 /> Appliquer {accepted.size || ''}</button></footer>
+    </section>}
+    {message && <small className="correction-message">{message}</small>}
+  </div>;
+}
 function Editor({
   note,
   cancel,
@@ -2676,7 +2723,7 @@ function Editor({
                   <button type="button" disabled={index === (d.details || []).length - 1} title="Descendre" onClick={() => { const next = [...(d.details || [])]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; setD({ ...d, details: next }); }}>↓</button>
                   <button type="button" title="Supprimer la catégorie" aria-label="Supprimer la catégorie" onClick={() => setD({ ...d, details: d.details?.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></button>
                 </div>
-                <RichTextEditor value={detail[1]} placeholder="Contenu de cette catégorie…" onChange={(text) => setD({ ...d, details: d.details?.map((item, itemIndex) => itemIndex === index ? [item[0], text] : item) })} />
+                <CorrectableRichEditor value={detail[1]} placeholder="Contenu de cette catégorie…" onChange={(text) => setD((current) => ({ ...current, details: current.details?.map((item, itemIndex) => itemIndex === index ? [item[0], text] : item) }))} />
               </article>
             ))}
             <button type="button" className="add-detail" onClick={() => setD({ ...d, details: [...(d.details || []), ['Nouvelle catégorie', '']] })}><Plus /> Ajouter une catégorie</button>

@@ -2364,3 +2364,10 @@ html.grimoire-ready body::before { display: none; }
   .side > button { min-height: 31px; padding-block: 5px; }
   .side > p,.side > p.archive-label { margin-top: 8px; }
 }
+
+/* Correcteur LanguageTool dans chaque chapitre */
+.correctable-rich { display: grid; gap: 7px; }
+.rich-correction-bar { display: flex; justify-content: flex-end; }
+.rich-correction-bar .correct-notes { padding: 6px 9px; font-size: 10px; }
+.compact-corrections { margin-top: 1px; }
+.compact-corrections .correction-preview { max-height: 150px; }
