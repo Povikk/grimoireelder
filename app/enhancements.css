@@ -2177,3 +2177,58 @@ html.grimoire-ready body::before { display: none; }
 }
 .note-resize:hover { opacity: 1; }
 @media(max-width:700px){.chalk-board{min-height:900px}.magic-note{max-width:320px}}
+
+/* Fermeture toujours accessible et protection des brouillons */
+.editor .edithead {
+  position: sticky;
+  z-index: 12;
+  top: -28px;
+  margin: -28px -28px 20px;
+  padding: 24px 28px 12px;
+  border-bottom: 1px solid rgba(var(--house-rgb), .2);
+  background: color-mix(in srgb, #0c1c18 94%, var(--house));
+  box-shadow: 0 10px 22px #04100d80;
+}
+.editor .edithead h2 { margin-bottom: 3px; }
+.editor .editor-close { position: relative; z-index: 2; }
+.unsaved-layer {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 10, 8, .74);
+  backdrop-filter: blur(8px);
+}
+.unsaved-card {
+  width: min(490px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(var(--house-rgb), .48);
+  border-radius: 17px;
+  background: radial-gradient(circle at 90% 10%, rgba(var(--house-rgb), .14), transparent 34%), #0b1b17;
+  color: #e8e4d9;
+  box-shadow: 0 28px 80px #000c, 0 0 42px rgba(var(--house-rgb), .12);
+  text-align: center;
+}
+.unsaved-card > span {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 13px;
+  border: 1px solid rgba(var(--house-rgb), .4);
+  border-radius: 50%;
+  color: var(--house);
+  background: rgba(var(--house-rgb), .08);
+}
+.unsaved-card > span svg { width: 19px; }
+.unsaved-card small { color: var(--house); font-size: 9px; letter-spacing: .16em; }
+.unsaved-card h3 { margin: 8px 0; font: 700 27px "Cormorant Garamond", Georgia, serif; }
+.unsaved-card p { margin: 0 auto 22px; max-width: 390px; color: #9eafa7; font-size: 13px; line-height: 1.55; }
+.unsaved-card > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.unsaved-card button { min-height: 40px; padding: 0 12px; border: 1px solid #ffffff1c; border-radius: 8px; background: #ffffff08; color: #d8e0dc; font-weight: 750; }
+.unsaved-card .discard-changes { border-color: #a9564655; color: #e8a79c; }
+.unsaved-card .save-changes { display: inline-flex; align-items: center; gap: 6px; border-color: rgba(var(--house-rgb), .45); background: color-mix(in srgb,var(--house) 30%,#123029); color: #fff; }
+.unsaved-card .save-changes svg { width: 15px; }
+@media(max-width:600px){.editor .edithead{top:-18px;margin:-18px -18px 17px;padding:18px}.unsaved-card{padding:23px 17px}.unsaved-card>div{display:grid}.unsaved-card button{width:100%}}

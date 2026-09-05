@@ -2290,10 +2290,13 @@ function Editor({
   const [imageDragging, setImageDragging] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [correctionMessage, setCorrectionMessage] = useState('');
+  const [closeWarning, setCloseWarning] = useState(false);
+  const originalNote = useRef(note);
   type CorrectionMatch = { offset: number; length: number; message: string; replacements: { value: string }[] };
   const [correctionReview, setCorrectionReview] = useState<CorrectionMatch[]>([]);
   const [acceptedCorrections, setAcceptedCorrections] = useState<Set<number>>(new Set());
   const [selectedReplacements, setSelectedReplacements] = useState<Record<number, number>>({});
+  const hasUnsavedChanges = JSON.stringify(d) !== JSON.stringify(originalNote.current);
   const tagChoices = [
     'Élève',
     'Professeur',
@@ -2371,6 +2374,41 @@ function Editor({
     setSelectedReplacements({});
     setCorrectionMessage(`${count} correction${count > 1 ? 's appliquées' : ' appliquée'}.`);
   };
+  const persistDraft = () => {
+    if (!d.title.trim()) return false;
+    const tagsWithoutHouse = d.tags.filter(
+      (tag) => !characterHouses.includes(tag as CharacterHouse),
+    );
+    save({
+      ...d,
+      tags:
+        d.kind === 'Personnage' && d.house
+          ? [...tagsWithoutHouse, d.house]
+          : tagsWithoutHouse,
+      house: d.kind === 'Personnage' ? d.house : undefined,
+    });
+    return true;
+  };
+  const attemptClose = () => hasUnsavedChanges ? setCloseWarning(true) : cancel();
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      if (closeWarning) setCloseWarning(false);
+      else attemptClose();
+    };
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [hasUnsavedChanges, closeWarning]);
   return (
     <div className="overlay center">
       <form
@@ -2398,19 +2436,7 @@ function Editor({
         }}
         onSubmit={(e) => {
           e.preventDefault();
-          if (d.title.trim()) {
-            const tagsWithoutHouse = d.tags.filter(
-              (tag) => !characterHouses.includes(tag as CharacterHouse),
-            );
-            save({
-              ...d,
-              tags:
-                d.kind === 'Personnage' && d.house
-                  ? [...tagsWithoutHouse, d.house]
-                  : tagsWithoutHouse,
-              house: d.kind === 'Personnage' ? d.house : undefined,
-            });
-          }
+          persistDraft();
         }}
       >
         {imageDragging && <div className="editor-dropveil"><ImagePlus /><b>Dépose l’image dans le grimoire</b><span>Elle sera optimisée automatiquement en WebP</span></div>}
@@ -2419,7 +2445,7 @@ function Editor({
             <small>NOUVELLE ENTRÉE</small>
             <h2>Écrire une fiche</h2>
           </div>
-          <button className="editor-close" type="button" onClick={cancel} aria-label="Fermer sans enregistrer" title="Fermer">
+          <button className="editor-close" type="button" onClick={attemptClose} aria-label="Fermer l’éditeur" title="Fermer">
             <X />
           </button>
         </div>
@@ -2762,11 +2788,24 @@ function Editor({
           )}
         </div>
         <footer>
-          <button type="button" onClick={cancel}>
+          <button type="button" onClick={attemptClose}>
             Annuler
           </button>
           <button className="primary">Enregistrer</button>
         </footer>
+        {closeWarning && <div className="unsaved-layer" role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title">
+          <section className="unsaved-card">
+            <span><Pencil /></span>
+            <small>MODIFICATIONS NON ENREGISTRÉES</small>
+            <h3 id="unsaved-title">Que veux-tu faire de cette fiche&nbsp;?</h3>
+            <p>Les changements apportés depuis l’ouverture seront perdus si tu quittes maintenant.</p>
+            <div>
+              <button type="button" onClick={() => setCloseWarning(false)}>Continuer l’édition</button>
+              <button type="button" className="discard-changes" onClick={cancel}>Quitter sans enregistrer</button>
+              <button type="button" className="save-changes" onClick={persistDraft} disabled={!d.title.trim()}><Check /> Enregistrer</button>
+            </div>
+          </section>
+        </div>}
       </form>
     </div>
   );
