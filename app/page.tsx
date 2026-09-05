@@ -625,7 +625,7 @@ export default function Home() {
             {currentUser || profileName ? profileName.slice(0, 1).toUpperCase() || <LogIn /> : <LogIn />}
           </span>
           <span className="account-copy">
-            <small>{currentUser ? 'GRIMOIRE SYNCHRONISÉ' : 'ACCÈS PERSONNEL'}</small>
+            <small>{currentUser ? wikiAdmin ? 'SCEAU DE L’ADMINISTRATEUR' : 'GRIMOIRE SYNCHRONISÉ' : 'ACCÈS PERSONNEL'}</small>
             <b>{currentUser ? profileName || 'Mon grimoire' : 'Se connecter'}</b>
             <em>
               {currentUser
@@ -633,7 +633,9 @@ export default function Home() {
                   ? 'Synchronisation…'
                   : syncState === 'error'
                     ? 'Synchronisation interrompue'
-                    : 'Compte Supabase'
+                    : wikiAdmin
+                      ? 'Administrateur du grimoire'
+                      : 'Grimoire en ligne'
                 : 'Se connecter'}
             </em>
           </span>
