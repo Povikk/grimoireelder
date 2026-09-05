@@ -116,6 +116,39 @@ const normalizeSearch = (value: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+const blobToDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+const optimizeImage = async (file: File) => {
+  if (!file.type.startsWith('image/'))
+    throw new Error('Le fichier choisi n’est pas une image.');
+  const bitmap = await createImageBitmap(file);
+  const maxSide = 1600;
+  const ratio = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+  canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Conversion impossible sur ce navigateur.');
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  let result: Blob | null = null;
+  for (const quality of [0.82, 0.72, 0.62]) {
+    result = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/webp', quality),
+    );
+    if (result && result.size <= 1_000_000) break;
+  }
+  if (!result) throw new Error('La conversion WebP a échoué.');
+  return blobToDataUrl(result);
+};
+
 const searchScore = (query: string, title: string, content: string) => {
   const words = normalizeSearch(query).split(' ').filter(Boolean);
   const cleanTitle = normalizeSearch(title);
@@ -343,26 +376,32 @@ export default function Home() {
   const characterName = mainCharacter?.title?.split(' ')[0] || 'voyageur';
   const addPhotos = (files: FileList | File[]) =>
     Array.from(files)
-      .filter((f) => f.type.startsWith('image/'))
-      .forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () =>
+      .filter((file) => file.type.startsWith('image/'))
+      .forEach(async (file) => {
+        try {
+          const image = await optimizeImage(file);
           setNotes((current) => [
             {
               id: crypto.randomUUID(),
               kind: 'Connaissance',
               title: file.name.replace(/\.[^.]+$/, ''),
-              sub: 'Souvenir photographique',
-              text: 'Image ajoutée au grimoire.',
+              sub: 'Souvenir photographique · WebP optimisé',
+              text: 'Image optimisée et ajoutée au grimoire.',
               tags: ['Souvenir', 'Photo'],
-              image: String(reader.result),
+              image,
               imageSize: 100,
               status: 'Confirmé',
               essential: false,
             },
             ...current,
           ]);
-        reader.readAsDataURL(file);
+        } catch (error) {
+          alert(
+            error instanceof Error
+              ? error.message
+              : 'Impossible de convertir cette image.',
+          );
+        }
       });
   const exportGrimoire = () => {
     const blob = new Blob([JSON.stringify({ version: 1, notes }, null, 2)], {
@@ -1252,6 +1291,7 @@ function Editor({
   save: (n: Note) => void;
 }) {
   const [d, setD] = useState(note);
+  const [imageOptimizing, setImageOptimizing] = useState(false);
   const tagChoices = [
     'Élève',
     'Professeur',
@@ -1265,11 +1305,21 @@ function Editor({
     'Priorité',
     'Photo',
   ];
-  const image = (f?: File) => {
+  const image = async (f?: File) => {
     if (!f) return;
-    const r = new FileReader();
-    r.onload = () => setD({ ...d, image: String(r.result) });
-    r.readAsDataURL(f);
+    setImageOptimizing(true);
+    try {
+      const optimized = await optimizeImage(f);
+      setD((current) => ({ ...current, image: optimized }));
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Impossible de convertir cette image.',
+      );
+    } finally {
+      setImageOptimizing(false);
+    }
   };
   return (
     <div className="overlay center">
@@ -1517,11 +1567,14 @@ function Editor({
               image(e.dataTransfer.files[0]);
             }}
           >
-            <ImagePlus /> Choisir une image
+            <ImagePlus />
+            {imageOptimizing ? 'Optimisation en cours…' : 'Choisir une image'}
+            <small>Conversion WebP automatique · 1 600 px maximum</small>
             <input
               hidden
               type="file"
               accept="image/*"
+              disabled={imageOptimizing}
               onChange={(e) => image(e.target.files?.[0])}
             />
           </label>

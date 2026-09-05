@@ -630,11 +630,14 @@
 }
 .file {
   min-height: 65px;
+  flex-wrap: wrap;
 }
-.file:after {
-  content: ' · glisser-déposer accepté';
-  font-size: 10px;
+.file small {
+  width: 100%;
   color: #96876b;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .dark {
   --paper: #101817;
