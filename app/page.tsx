@@ -272,6 +272,7 @@ export default function Home() {
     [tourOpen, setTourOpen] = useState(false),
     [tourStep, setTourStep] = useState(0),
     [wikiOpen, setWikiOpen] = useState(false),
+    [wikiSeed, setWikiSeed] = useState<Note | null>(null),
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
   useEffect(() => {
@@ -416,7 +417,7 @@ export default function Home() {
     }
   }, [q]);
   useEffect(() => {
-    if (!open && !edit && !searchOpen && !authOpen && !tourOpen) return;
+    if (!open && !edit && !searchOpen && !authOpen && !tourOpen && !wikiOpen) return;
     const previousOverflow = document.body.style.overflow;
     const previousPadding = document.body.style.paddingRight;
     const scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -428,6 +429,7 @@ export default function Home() {
         else if (open) setOpen(null);
         else if (searchOpen) setSearchOpen(null);
         else if (authOpen) setAuthOpen(false);
+        else if (wikiOpen) setWikiOpen(false);
         else setTourOpen(false);
       }
     };
@@ -437,7 +439,7 @@ export default function Home() {
       document.body.style.paddingRight = previousPadding;
       window.removeEventListener('keydown', closeOnEscape);
     };
-  }, [open, edit, searchOpen, authOpen, tourOpen]);
+  }, [open, edit, searchOpen, authOpen, tourOpen, wikiOpen]);
   const chooseTheme = (next: HouseTheme) => {
     setTheme(next);
     setThemeOpen(false);
@@ -1277,6 +1279,9 @@ export default function Home() {
                 </section>
               ))}
               <div className="actions">
+                <button className="action-wiki" onClick={() => { setWikiSeed(open); setOpen(null); setWikiOpen(true); }}>
+                  <Send /> Proposer au wiki
+                </button>
                 <button
                   className={`action-pin ${open.essential ? 'is-pinned' : ''}`}
                   onClick={() => {
@@ -1417,7 +1422,8 @@ export default function Home() {
           user={currentUser}
           admin={wikiAdmin}
           entries={wikiEntries}
-          close={() => setWikiOpen(false)}
+          seed={wikiSeed}
+          close={() => { setWikiOpen(false); setWikiSeed(null); }}
           refresh={async () => setWikiEntries(await loadWikiSubmissions(currentUser))}
         />
       )}
@@ -1439,19 +1445,22 @@ export default function Home() {
     </main>
   );
 }
-function WikiPanel({ user, admin, entries, close, refresh }: {
+function WikiPanel({ user, admin, entries, seed, close, refresh }: {
   user: User;
   admin: boolean;
   entries: WikiSubmission[];
+  seed: Note | null;
   close: () => void;
   refresh: () => Promise<void>;
 }) {
-  const [category, setCategory] = useState<WikiSubmission['category']>('Lore');
-  const [section, setSection] = useState('Communauté');
-  const [title, setTitle] = useState('');
-  const [subtitle, setSubtitle] = useState('');
-  const [content, setContent] = useState('');
-  const [source, setSource] = useState('');
+  const seedCategory: WikiSubmission['category'] = seed?.kind === 'Lieu' ? 'Lieu' : seed?.kind === 'Personnage' ? 'Personnalité' : 'Lore';
+  const [category, setCategory] = useState<WikiSubmission['category']>(seedCategory);
+  const [section, setSection] = useState(seed?.kind || 'Communauté');
+  const [title, setTitle] = useState(seed?.title || '');
+  const [subtitle, setSubtitle] = useState(seed?.sub || '');
+  const [content, setContent] = useState(seed ? [seed.text, ...(seed.details || []).map((detail) => `${detail[0]}\n${detail[1]}`)].filter(Boolean).join('\n\n') : '');
+  const [source, setSource] = useState(seed?.source || '');
+  const [publicConsent, setPublicConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const visible = admin ? entries : entries.filter((entry) => entry.created_by === user.id);
@@ -1460,6 +1469,7 @@ function WikiPanel({ user, admin, entries, close, refresh }: {
     try {
       const result = await submitWikiProposal(user, { category, section, title, subtitle, content, source });
       setTitle(''); setSubtitle(''); setContent(''); setSource('');
+      setPublicConsent(false);
       setMessage(result.notificationSent ? 'Ta proposition attend désormais le sceau de l’admin.' : 'Proposition enregistrée. La notification e-mail devra être configurée.');
       await refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible d’envoyer la proposition.'); }
@@ -1476,12 +1486,14 @@ function WikiPanel({ user, admin, entries, close, refresh }: {
       <button className="close" onClick={close}><X /></button>
       <header><span><Sparkles /></span><div><small>SCRIPTORIUM COMMUNAUTAIRE</small><h2>{admin ? 'Salle de modération' : 'Proposer une page officielle'}</h2><p>Rien ne rejoint les archives communes avant ta validation.</p></div></header>
       {!admin && <form onSubmit={submit}>
+        <aside className="wiki-warning"><ShieldAlert /><div><b>Cette proposition deviendra publique si elle est acceptée</b><p>Retire les secrets, relations, projets personnels et informations privées. Propose plutôt une pièce, un lieu, un objet, une créature ou une connaissance utile à tous.</p></div></aside>
         <div className="wiki-grid"><label>Catégorie<select value={category} onChange={(e) => setCategory(e.target.value as WikiSubmission['category'])}>{['Lore','Règle','Lieu','Créature','Personnalité'].map(v => <option key={v}>{v}</option>)}</select></label><label>Section<input value={section} onChange={(e) => setSection(e.target.value)} maxLength={60} required /></label></div>
         <label>Titre<input value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={100} required /></label>
         <label>Sous-titre (facultatif)<input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} maxLength={160} /></label>
         <label>Contenu<textarea value={content} onChange={(e) => setContent(e.target.value)} minLength={20} maxLength={10000} required /></label>
         <label>Source ou contexte (recommandé)<input value={source} onChange={(e) => setSource(e.target.value)} maxLength={300} placeholder="Scène RP, annonce staff, lien…" /></label>
-        <button className="wiki-submit" disabled={busy || title.length < 2 || content.length < 20}><Send /> Envoyer pour validation</button>
+        <label className="wiki-consent"><input type="checkbox" checked={publicConsent} onChange={(e) => setPublicConsent(e.target.checked)} /><span>J’ai relu cette fiche et je confirme qu’elle peut être rendue publique.</span></label>
+        <button className="wiki-submit" disabled={busy || !publicConsent || title.length < 2 || content.length < 20}><Send /> Envoyer pour validation</button>
       </form>}
       {message && <p className="wiki-message">{message}</p>}
       <div className="wiki-list"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{!visible.length && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
