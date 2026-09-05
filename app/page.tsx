@@ -2134,7 +2134,7 @@ function Editor({
             <small>NOUVELLE ENTRÉE</small>
             <h2>Écrire une fiche</h2>
           </div>
-          <button type="button" onClick={cancel}>
+          <button className="editor-close" type="button" onClick={cancel} aria-label="Fermer sans enregistrer" title="Fermer">
             <X />
           </button>
         </div>
