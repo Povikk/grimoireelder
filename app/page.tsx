@@ -14,6 +14,7 @@ import {
   LockKeyhole,
   LogIn,
   MapPin,
+  StickyNote,
   Menu,
   Palette,
   Pencil,
@@ -44,7 +45,7 @@ import {
   reviewWikiProposal,
   type WikiSubmission,
 } from '@/lib/supabase';
-type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort';
+type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort' | 'Note libre';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
 const characterHouses: CharacterHouse[] = [
   'Aerwyn',
@@ -84,6 +85,9 @@ type Note = {
   incantation?: string;
   spellDomain?: 'Charme' | 'Défense' | 'Soin' | 'Altération' | 'Élémentaire' | 'Utilitaire' | 'Interdit' | 'Autre';
   mastery?: 'À étudier' | 'En apprentissage' | 'Instable' | 'Maîtrisé';
+  boardX?: number;
+  boardY?: number;
+  noteColor?: 'or' | 'violet' | 'bleu' | 'vert' | 'rose';
   tasks?: { id: string; text: string; done: boolean }[];
   details?: string[][];
 };
@@ -162,6 +166,7 @@ const icons = {
   Connaissance: BookOpen,
   Projet: BriefcaseBusiness,
   Sort: WandSparkles,
+  'Note libre': StickyNote,
 };
 const statusesByKind: Record<Kind, string[]> = {
   Personnage: ['À rencontrer', 'Rencontré', 'À approfondir', 'Proche', 'Perdu de vue'],
@@ -169,6 +174,7 @@ const statusesByKind: Record<Kind, string[]> = {
   Connaissance: ['À vérifier', 'Soupçonné', 'Confirmé', 'Contredit', 'Obsolète'],
   Projet: ['Idée', 'À préparer', 'En cours', 'En attente', 'Terminé', 'Abandonné'],
   Sort: ['À découvrir', 'À apprendre', 'En entraînement', 'Maîtrisé', 'Interdit'],
+  'Note libre': ['Brouillon'],
 };
 
 const normalizeSearch = (value: string) =>
@@ -570,6 +576,12 @@ export default function Home() {
       imageSize: 100,
       essential: false,
     });
+  const addLooseNote = () =>
+    setNotes((current) => [{
+      id: crypto.randomUUID(), kind: 'Note libre', title: 'Nouvelle note', sub: '', text: '', tags: [],
+      status: 'Brouillon', boardX: 8 + Math.random() * 48, boardY: 10 + Math.random() * 42,
+      noteColor: ['or', 'violet', 'bleu', 'vert', 'rose'][Math.floor(Math.random() * 5)] as Note['noteColor'],
+    }, ...current]);
   const mainCharacter = notes.find((note) => note.id === 'joueur');
   const characterReady =
     !!mainCharacter?.title &&
@@ -675,6 +687,9 @@ export default function Home() {
             </em>
           </button>
         ))}
+        {currentUser && <button className={section === 'Tableau' ? 'active' : ''} onClick={() => { setSection('Tableau'); setMenu(false); setQ(''); }}>
+          <StickyNote /> Notes diverses<em>{notes.filter((note) => note.kind === 'Note libre').length}</em>
+        </button>}
         <p className="archive-label">ARCHIVES OFFICIELLES</p>
         <button
           className={section === 'Règlement' ? 'active' : ''}
@@ -788,8 +803,8 @@ export default function Home() {
             )}
           </div>
           {currentUser && !['Règlement', 'Lore', 'Elderwood'].includes(section) && (
-            <button className="primary" onClick={add}>
-              <Plus /> Nouvelle fiche
+            <button className="primary" onClick={section === 'Tableau' ? addLooseNote : add}>
+              <Plus /> {section === 'Tableau' ? 'Nouvelle note' : 'Nouvelle fiche'}
             </button>
           )}
           </div>
@@ -912,6 +927,8 @@ export default function Home() {
             <LoreView query={q} />
           ) : section === 'Elderwood' ? (
             <ElderwoodView query={q} />
+          ) : section === 'Tableau' ? (
+            <MagicBoard notes={notes.filter((note) => note.kind === 'Note libre')} update={(updated) => setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))} remove={(id) => setNotes((current) => current.filter((note) => note.id !== id))} add={addLooseNote} />
           ) : (
             <>
               {section === 'Toutes' && !q && (
@@ -2077,6 +2094,42 @@ function Tags({
       ))}
     </div>
   );
+}
+function MagicBoard({ notes, update, remove, add }: {
+  notes: Note[];
+  update: (note: Note) => void;
+  remove: (id: string) => void;
+  add: () => void;
+}) {
+  const colors: NonNullable<Note['noteColor']>[] = ['or', 'violet', 'bleu', 'vert', 'rose'];
+  const startDrag = (event: React.PointerEvent<HTMLDivElement>, note: Note) => {
+    if ((event.target as HTMLElement).closest('button,input,textarea')) return;
+    const board = event.currentTarget.parentElement;
+    if (!board) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect = board.getBoundingClientRect();
+    const move = (moveEvent: PointerEvent) => {
+      update({ ...note, boardX: Math.max(0, Math.min(82, ((moveEvent.clientX - rect.left - 24) / rect.width) * 100)), boardY: Math.max(0, Math.min(78, ((moveEvent.clientY - rect.top - 22) / rect.height) * 100)) });
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
+  };
+  return <section className="magic-board-page">
+    <header><div><small>CARNET DE TRAVERSE</small><h1>Notes diverses</h1><p>Écris librement, puis déplace tes pensées sur le tableau.</p></div><button onClick={add}><Plus /> Ajouter une note</button></header>
+    <div className="chalk-board">
+      <span className="chalk-sigil">✦　☾　✧</span>
+      {!notes.length && <button className="board-empty" onClick={add}><StickyNote /><b>Le tableau attend tes premières pensées</b><small>Ajouter une note magique</small></button>}
+      {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}`} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%` }} key={note.id}>
+        <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button aria-label="Changer la couleur" title="Changer la couleur" onClick={() => { const index = colors.indexOf(note.noteColor || 'or'); update({ ...note, noteColor: colors[(index + 1) % colors.length] }); }} /><button aria-label="Supprimer la note" title="Supprimer" onClick={() => confirm('Effacer cette note ?') && remove(note.id)}><X /></button></div>
+        <input value={note.title} onChange={(event) => update({ ...note, title: event.target.value })} placeholder="Titre de la note" />
+        <textarea value={note.text} onChange={(event) => update({ ...note, text: event.target.value })} placeholder="Écris quelque chose…" />
+      </article>)}
+    </div>
+  </section>;
 }
 function Editor({
   note,
