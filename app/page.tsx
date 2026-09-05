@@ -11,6 +11,8 @@ import {
   Download,
   ImagePlus,
   LayoutDashboard,
+  LockKeyhole,
+  LogIn,
   MapPin,
   Menu,
   Moon,
@@ -227,7 +229,9 @@ export default function Home() {
     >('Tout'),
     [searchTag, setSearchTag] = useState('Tous'),
     [dark, setDark] = useState(true),
-    [greeting, setGreeting] = useState('Bienvenue');
+    [greeting, setGreeting] = useState('Bienvenue'),
+    [authOpen, setAuthOpen] = useState(false),
+    [profileName, setProfileName] = useState('');
   useEffect(() => {
     try {
       const s = localStorage.getItem('elderwood-grimoire');
@@ -246,6 +250,8 @@ export default function Home() {
           ),
         );
       const savedTheme = localStorage.getItem('elderwood-dark');
+      const savedProfile = localStorage.getItem('elderwood-profile-name');
+      if (savedProfile) setProfileName(savedProfile);
       const night = savedTheme === null ? true : savedTheme === 'true';
       setDark(night);
       document.documentElement.classList.toggle('dark', night);
@@ -287,7 +293,7 @@ export default function Home() {
     }
   }, [q]);
   useEffect(() => {
-    if (!open && !edit && !searchOpen) return;
+    if (!open && !edit && !searchOpen && !authOpen) return;
     const previousOverflow = document.body.style.overflow;
     const previousPadding = document.body.style.paddingRight;
     const scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -297,7 +303,8 @@ export default function Home() {
       if (event.key === 'Escape') {
         if (edit) setEdit(null);
         else if (open) setOpen(null);
-        else setSearchOpen(null);
+        else if (searchOpen) setSearchOpen(null);
+        else setAuthOpen(false);
       }
     };
     window.addEventListener('keydown', closeOnEscape);
@@ -306,7 +313,7 @@ export default function Home() {
       document.body.style.paddingRight = previousPadding;
       window.removeEventListener('keydown', closeOnEscape);
     };
-  }, [open, edit, searchOpen]);
+  }, [open, edit, searchOpen, authOpen]);
   const toggleDark = () =>
     setDark((v) => {
       const next = !v;
@@ -461,14 +468,26 @@ export default function Home() {
     <main>
       <aside className={menu ? 'side on' : 'side'}>
         <div className="brand">
-          <i>
+          <i className="brand-sigil">
             <WandSparkles />
+            <span>✦</span>
           </i>
           <div>
             <b>Elderwood</b>
-            <small>Grimoire privé</small>
+            <small>Le grimoire des résonants</small>
           </div>
         </div>
+        <button className="account-gate" onClick={() => setAuthOpen(true)}>
+          <span className="account-avatar">
+            {profileName ? profileName.slice(0, 1).toUpperCase() : <LogIn />}
+          </span>
+          <span className="account-copy">
+            <small>{profileName ? 'IDENTITÉ SCELLÉE' : 'ACCÈS PERSONNEL'}</small>
+            <b>{profileName || 'Ouvrir mon grimoire'}</b>
+            <em>{profileName ? 'Données locales' : 'Se connecter'}</em>
+          </span>
+          <ChevronRight />
+        </button>
         <p>LE GRIMOIRE</p>
         {[
           ['Toutes', LayoutDashboard],
@@ -1069,6 +1088,17 @@ export default function Home() {
           </article>
         </div>
       )}
+      {authOpen && (
+        <AuthPanel
+          name={profileName}
+          cancel={() => setAuthOpen(false)}
+          save={(name) => {
+            setProfileName(name);
+            localStorage.setItem('elderwood-profile-name', name);
+            setAuthOpen(false);
+          }}
+        />
+      )}
       {edit && (
         <Editor
           note={edit}
@@ -1085,6 +1115,70 @@ export default function Home() {
         />
       )}
     </main>
+  );
+}
+function AuthPanel({
+  name,
+  cancel,
+  save,
+}: {
+  name: string;
+  cancel: () => void;
+  save: (name: string) => void;
+}) {
+  const [draft, setDraft] = useState(name);
+  return (
+    <div
+      className="overlay auth-overlay"
+      onMouseDown={(event) => event.target === event.currentTarget && cancel()}
+    >
+      <section className="auth-card" role="dialog" aria-modal="true">
+        <button className="close" onClick={cancel} aria-label="Fermer">
+          <X />
+        </button>
+        <div className="auth-rune">
+          <WandSparkles />
+          <span>✦</span>
+        </div>
+        <small>LE SCEAU DU PROPRIÉTAIRE</small>
+        <h2>Ouvre ton grimoire</h2>
+        <p>
+          Choisis l’identité affichée sur cet appareil. Tes notes restent privées
+          dans ton navigateur pour le moment.
+        </p>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = draft.trim();
+            if (value) save(value);
+          }}
+        >
+          <label htmlFor="grimoire-name">Nom ou pseudonyme</label>
+          <div className="auth-input">
+            <Sparkles />
+            <input
+              id="grimoire-name"
+              autoFocus
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Ex. Corvin"
+              maxLength={40}
+            />
+          </div>
+          <button className="auth-submit" disabled={!draft.trim()}>
+            {name ? 'Mettre à jour mon sceau' : 'Sceller mon grimoire'}
+            <ChevronRight />
+          </button>
+        </form>
+        <div className="auth-future">
+          <LockKeyhole />
+          <span>
+            <b>Compte en ligne bientôt disponible</b>
+            <small>Connexion sécurisée et synchronisation entre appareils.</small>
+          </span>
+        </div>
+      </section>
+    </div>
   );
 }
 function RulesView({ query }: { query: string }) {
