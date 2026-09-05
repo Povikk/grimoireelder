@@ -28,7 +28,7 @@ begin
     account.created_at,
     account.last_sign_in_at,
     (select count(*) from public.notes n where n.user_id = account.id),
-    (select coalesce(sum(coalesce((o.metadata ->> 'size')::bigint, 0)), 0)
+    (select coalesce(sum(coalesce((o.metadata ->> 'size')::bigint, 0)), 0)::bigint
        from storage.objects o
       where o.bucket_id = 'grimoire-images'
         and o.name like account.id::text || '/%')
