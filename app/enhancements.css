@@ -2007,3 +2007,19 @@ html.grimoire-ready body::before { display: none; }
 .public-cta p {
   color: #9fafa7;
 }
+/* Signature discrète */
+.povik-signature {
+  max-width: 1380px;
+  margin: -42px auto 0;
+  padding: 0 clamp(20px, 4vw, 58px) 22px;
+  color: rgba(174, 190, 182, .42);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-align: center;
+  user-select: none;
+}
+.povik-signature span {
+  margin-right: 5px;
+  color: rgba(var(--house-rgb), .48);
+  font-size: 8px;
+}

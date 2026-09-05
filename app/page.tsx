@@ -1174,6 +1174,9 @@ export default function Home() {
             </>
           )}
         </div>
+        <footer className="povik-signature" aria-label="Crédits du site">
+          <span>✦</span> by Povik · Tous droits réservés
+        </footer>
       </section>
       {open && (
         <div
