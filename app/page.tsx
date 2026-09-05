@@ -280,6 +280,11 @@ export default function Home() {
       const hour = new Date().getHours();
       setGreeting(hour < 6 ? 'Douce nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir');
     } catch {}
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.documentElement.classList.add('grimoire-ready'),
+      ),
+    );
   }, []);
   useEffect(() => {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');

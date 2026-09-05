@@ -15,7 +15,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('elderwood-house-theme');if(!['aerwyn','brumval','falcon','venatrix'].includes(t))t='falcon';document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='falcon'}setTimeout(function(){document.documentElement.classList.add('grimoire-ready')},1800)})();`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

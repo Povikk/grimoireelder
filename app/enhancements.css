@@ -1792,6 +1792,39 @@ html[data-theme] .tags span[role='button']:focus {
 .facts .house-fact.falcon::before { background: #d8893c; }
 .facts .house-fact.venatrix::before { background: #9862d4; }
 
+/* Chargement sans flash du profil ou du thème par défaut. */
+html:not(.grimoire-ready) body > main {
+  opacity: 0;
+}
+html:not(.grimoire-ready) body::before {
+  content: '✦';
+  position: fixed;
+  z-index: 99999;
+  inset: 50% auto auto 50%;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(var(--house-rgb), .52);
+  border-radius: 17px 5px 17px 5px;
+  background: rgba(10, 25, 21, .92);
+  color: var(--house);
+  box-shadow: 0 0 34px rgba(var(--house-rgb), .24);
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: grimoire-awaken .8s ease-in-out infinite alternate;
+}
+html.grimoire-ready body > main {
+  animation: grimoire-reveal .24s ease-out both;
+}
+html.grimoire-ready body::before { display: none; }
+@keyframes grimoire-awaken {
+  to { opacity: .48; transform: translate(-50%, -50%) rotate(8deg) scale(.92); }
+}
+@keyframes grimoire-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* En-tête lisible sans troncature */
 .side > .brand {
   min-height: 78px;
