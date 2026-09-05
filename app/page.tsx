@@ -221,6 +221,15 @@ const searchScore = (query: string, title: string, content: string) => {
     0,
   );
 };
+const loreAccent = (section: string) => ({
+  Fondements: '#cf9d32', École: '#d7b33f', Maisons: '#7b64c7', Lieux: '#3b8bd6',
+  Chronologie: '#c57732', Glossaire: '#3da67a', Créatures: '#4b9b52', Société: '#a86cb9',
+  Familles: '#b27b46', Personnalités: '#d05e58', Razeball: '#4d82cf',
+}[section] || '#c8a755');
+const ruleAccent = (section: string) => ({
+  Général: '#c4a34e', 'Lexique RP': '#4d8bcf', RolePlay: '#42a270', 'RPK On': '#d35d52',
+  Famille: '#a875c2', Vocal: '#d17d45', Staff: '#6d7f95',
+}[section] || '#c4a34e');
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]),
     [section, setSection] = useState('Lore'),
@@ -1789,6 +1798,7 @@ function RulesView({ query }: { query: string }) {
         {visible.map((r) => (
           <article
             className={r.critical ? 'critical' : ''}
+            style={{ '--entry-accent': ruleAccent(r.section) } as React.CSSProperties}
             key={r.section + r.number}
           >
             <div className="rule-num">{String(r.number).padStart(2, '0')}</div>
@@ -1865,7 +1875,7 @@ function LoreView({ query }: { query: string }) {
         className={tab === 'Chronologie' ? 'lore-grid timeline' : 'lore-grid'}
       >
         {visible.map((x) => (
-          <article key={x.section + x.title}>
+          <article style={{ '--entry-accent': loreAccent(x.section) } as React.CSSProperties} key={x.section + x.title}>
             <div className="lore-meta">
               <span>{x.section}</span>
               {x.year && <b>{x.year}</b>}
