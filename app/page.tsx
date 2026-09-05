@@ -248,8 +248,8 @@ const mergeCanonicalPlaces = (saved: Note[]) => {
   ];
 };
 export default function Home() {
-  const [notes, setNotes] = useState(() => [...canonicalPlaces, ...initial]),
-    [section, setSection] = useState('Toutes'),
+  const [notes, setNotes] = useState(() => [...canonicalPlaces]),
+    [section, setSection] = useState('Lore'),
     [q, setQ] = useState(''),
     [open, setOpen] = useState<Note | null>(null),
     [searchOpen, setSearchOpen] = useState<SearchDetail | null>(null),
@@ -276,25 +276,7 @@ export default function Home() {
     [wikiAdmin, setWikiAdmin] = useState(false);
   useEffect(() => {
     try {
-      const s = localStorage.getItem('elderwood-grimoire');
-      if (s)
-        setNotes(
-          mergeCanonicalPlaces(
-            JSON.parse(s).map((n: Note) => ({
-              ...n,
-              imageSize: n.imageSize || 100,
-              status: n.status || 'À découvrir',
-              details:
-                n.id === 'joueur' && n.title !== 'Mon personnage'
-                  ? n.details || details
-                  : n.details,
-            })),
-          ),
-        );
       const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
-      const savedProfile = localStorage.getItem('elderwood-profile-name');
-      if (savedProfile) setProfileName(savedProfile);
-      if (!localStorage.getItem('elderwood-onboarding-done')) setTourOpen(true);
       const activeTheme = houseThemes.some((item) => item.id === savedTheme)
         ? savedTheme!
         : 'falcon';
@@ -323,6 +305,8 @@ export default function Home() {
     const { data } = client.auth.onAuthStateChange((event, session) => {
       setCloudReady(false);
       setCurrentUser(session?.user || null);
+      if (event === 'SIGNED_IN') setSection('Toutes');
+      if (event === 'SIGNED_OUT') setSection('Lore');
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
         setAuthOpen(true);
@@ -339,6 +323,10 @@ export default function Home() {
     if (!currentUser) {
       setCloudReady(false);
       setSyncState('local');
+      setNotes([...canonicalPlaces]);
+      setProfileName('');
+      setOpen(null);
+      setEdit(null);
       return;
     }
     let active = true;
@@ -350,12 +338,9 @@ export default function Home() {
         if (remote.length) {
           setNotes(mergeCanonicalPlaces(remote));
         } else {
-          const saved = localStorage.getItem('elderwood-grimoire');
-          const local = saved ? (JSON.parse(saved) as Note[]) : initial;
-          const personal = local.filter((note) => !note.id.startsWith('elderwood-'));
-          await replacePrivateNotes(currentUser, personal);
+          await replacePrivateNotes(currentUser, initial);
           if (!active) return;
-          setNotes(mergeCanonicalPlaces(personal));
+          setNotes(mergeCanonicalPlaces(initial));
         }
         const identity =
           currentUser.user_metadata?.display_name ||
@@ -367,6 +352,7 @@ export default function Home() {
         }
         setCloudReady(true);
         setSyncState('synced');
+        if (!localStorage.getItem('elderwood-onboarding-done')) setTourOpen(true);
       } catch {
         if (active) setSyncState('error');
       }
@@ -407,10 +393,6 @@ export default function Home() {
     window.addEventListener('pointermove', leaveMagic, { passive: true });
     return () => window.removeEventListener('pointermove', leaveMagic);
   }, []);
-  useEffect(
-    () => localStorage.setItem('elderwood-grimoire', JSON.stringify(notes)),
-    [notes],
-  );
   useEffect(() => {
     if (!currentUser || !cloudReady) return;
     const timer = window.setTimeout(async () => {
@@ -659,8 +641,8 @@ export default function Home() {
             {currentUser || profileName ? profileName.slice(0, 1).toUpperCase() || <LogIn /> : <LogIn />}
           </span>
           <span className="account-copy">
-            <small>{currentUser ? 'GRIMOIRE SYNCHRONISÉ' : profileName ? 'IDENTITÉ LOCALE' : 'ACCÈS PERSONNEL'}</small>
-            <b>{profileName || 'Ouvrir mon grimoire'}</b>
+            <small>{currentUser ? 'GRIMOIRE SYNCHRONISÉ' : 'ACCÈS PERSONNEL'}</small>
+            <b>{currentUser ? profileName || 'Mon grimoire' : 'Se connecter'}</b>
             <em>
               {currentUser
                 ? syncState === 'syncing'
@@ -673,8 +655,8 @@ export default function Home() {
           </span>
           <ChevronRight />
         </button>
-        <p>MON GRIMOIRE</p>
-        {[
+        {currentUser && <p>MON GRIMOIRE</p>}
+        {currentUser && [
           ['Toutes', LayoutDashboard],
           ['Personnage', Users],
           ['Lieu', MapPin],
@@ -741,7 +723,7 @@ export default function Home() {
         <div className="local">
           {currentUser ? <LockKeyhole /> : <Sparkles />}
           <span>
-            <b>{currentUser ? 'Coffre privé en ligne' : 'Mémoire locale'}</b>
+            <b>{currentUser ? 'Coffre privé en ligne' : 'Archives publiques'}</b>
             <br />
             {currentUser
               ? syncState === 'syncing'
@@ -749,10 +731,10 @@ export default function Home() {
                 : syncState === 'error'
                   ? 'Les données locales restent disponibles.'
                   : 'Tes fiches suivent ton compte.'
-              : 'Connecte-toi pour synchroniser tes fiches.'}
+              : 'Connecte-toi pour créer ton grimoire personnel.'}
           </span>
         </div>
-        <div className="vault-actions">
+        {currentUser && <div className="vault-actions">
           <button onClick={exportGrimoire} title="Exporter une sauvegarde">
             <Download /> Sauvegarder
           </button>
@@ -765,7 +747,7 @@ export default function Home() {
               onChange={(event) => importGrimoire(event.target.files?.[0])}
             />
           </label>
-        </div>
+        </div>}
       </aside>
       <section className="work">
         <header>
@@ -835,7 +817,7 @@ export default function Home() {
           >
             <CircleHelp />
           </button>
-          {!['Règlement', 'Lore', 'Elderwood'].includes(section) && (
+          {currentUser && !['Règlement', 'Lore', 'Elderwood'].includes(section) && (
             <button className="primary" onClick={add}>
               <Plus /> Nouvelle fiche
             </button>
