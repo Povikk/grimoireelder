@@ -272,6 +272,7 @@ export default function Home() {
     [authNotice, setAuthNotice] = useState(''),
     [profileName, setProfileName] = useState(''),
     [currentUser, setCurrentUser] = useState<User | null>(null),
+    [authResolved, setAuthResolved] = useState(false),
     [cloudReady, setCloudReady] = useState(false),
     [syncState, setSyncState] = useState<'local' | 'syncing' | 'synced' | 'error'>('local'),
     [tourOpen, setTourOpen] = useState(false),
@@ -294,11 +295,6 @@ export default function Home() {
       const hour = new Date().getHours();
       setGreeting(hour < 6 ? 'Douce nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir');
     } catch {}
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        document.documentElement.classList.add('grimoire-ready'),
-      ),
-    );
   }, []);
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -306,13 +302,18 @@ export default function Home() {
     const isSignupConfirmation =
       hash.get('type') === 'signup' || query.get('type') === 'signup';
     const client = getSupabase();
-    if (!client) return;
+    if (!client) {
+      setAuthResolved(true);
+      return;
+    }
     client.auth.getSession().then(({ data }) => {
       const user = data.session?.user || null;
       setCurrentUser(user);
       if (user) setSection('Toutes');
-    });
+      setAuthResolved(true);
+    }).catch(() => setAuthResolved(true));
     const { data } = client.auth.onAuthStateChange((event, session) => {
+      setAuthResolved(true);
       setCloudReady(false);
       setCurrentUser(session?.user || null);
       if (event === 'SIGNED_IN') setSection('Toutes');
@@ -391,6 +392,15 @@ export default function Home() {
       active = false;
     };
   }, [currentUser]);
+  useEffect(() => {
+    const ready = authResolved && (!currentUser || cloudReady || syncState === 'error');
+    if (!ready) return;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.documentElement.classList.add('grimoire-ready'),
+      ),
+    );
+  }, [authResolved, currentUser, cloudReady, syncState]);
   useEffect(() => {
     loadWikiSubmissions(currentUser).then(setWikiEntries).catch(() => setWikiEntries([]));
     isWikiAdmin(currentUser).then(setWikiAdmin).catch(() => setWikiAdmin(false));
