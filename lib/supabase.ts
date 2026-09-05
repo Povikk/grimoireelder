@@ -21,6 +21,16 @@ export type WikiSubmission = {
   created_at: string;
 };
 
+export type AdminUser = {
+  user_id: string;
+  email: string;
+  display_name: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  note_count: number;
+  storage_bytes: number;
+};
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
@@ -124,6 +134,31 @@ export async function isWikiAdmin(user?: User | null) {
   const { data, error } = await client.rpc('is_wiki_admin');
   if (error) throw error;
   return Boolean(data);
+}
+
+export async function loadAdminUsers() {
+  const client = getSupabase();
+  if (!client) return [] as AdminUser[];
+  const { data, error } = await client.rpc('get_admin_users');
+  if (error) throw error;
+  return (data || []) as AdminUser[];
+}
+
+export async function loadAdminNotes(userId: string): Promise<CloudNote[]> {
+  const client = getSupabase();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('notes')
+    .select('id,payload,image_path')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return Promise.all((data || []).map(async (row) => ({
+    ...(row.payload as CloudNote),
+    id: row.id,
+    imagePath: row.image_path || undefined,
+    image: await signedImage(client, row.image_path),
+  })));
 }
 
 export async function submitWikiProposal(

@@ -10,6 +10,7 @@ import {
   Compass,
   Dices,
   ImagePlus,
+  Eye,
   LayoutDashboard,
   Link2,
   LockKeyhole,
@@ -28,6 +29,7 @@ import {
   SpellCheck2,
   Star,
   Trash2,
+  UserCog,
   Users,
   WandSparkles,
   X,
@@ -44,6 +46,9 @@ import {
   isWikiAdmin,
   submitWikiProposal,
   reviewWikiProposal,
+  loadAdminUsers,
+  loadAdminNotes,
+  type AdminUser,
   type WikiSubmission,
 } from '@/lib/supabase';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort' | 'Note libre';
@@ -285,6 +290,7 @@ export default function Home() {
     [tourOpen, setTourOpen] = useState(false),
     [tourStep, setTourStep] = useState(0),
     [wikiOpen, setWikiOpen] = useState(false),
+    [adminOpen, setAdminOpen] = useState(false),
     [wikiSeed, setWikiSeed] = useState<Note | null>(null),
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
@@ -775,6 +781,9 @@ export default function Home() {
           {wikiAdmin ? 'Modérer le wiki' : 'Proposer au wiki'}
           <em>{wikiAdmin ? wikiEntries.filter((item) => item.status === 'pending').length + (wikiDemoPending ? 1 : 0) : wikiEntries.filter((item) => item.created_by === currentUser?.id && item.status === 'pending').length}</em>
         </button>
+        {wikiAdmin && <button className="admin-gate" onClick={() => setAdminOpen(true)}>
+          <UserCog /> Administration
+        </button>}
         <div className="local">
           {currentUser ? <LockKeyhole /> : <Sparkles />}
           <span>
@@ -1488,6 +1497,12 @@ export default function Home() {
           refresh={async () => setWikiEntries(await loadWikiSubmissions(currentUser))}
         />
       )}
+      {adminOpen && currentUser && wikiAdmin && (
+        <AdminPanel
+          close={() => setAdminOpen(false)}
+          openModeration={() => { setAdminOpen(false); setWikiOpen(true); }}
+        />
+      )}
       {edit && (
         <Editor
           note={edit}
@@ -1560,6 +1575,41 @@ function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, cl
       </form>}
       {message && <p className="wiki-message">{message}</p>}
       <div className="wiki-list"><div className="wiki-list-heading"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{admin && !demoPending && <button onClick={() => { setDemoPending(true); setMessage(''); }}><Sparkles /> Voir une demande d’exemple</button>}</div>{!visible.length && !demoPending && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{admin && demoPending && <article className="wiki-pending wiki-demo"><span className="demo-ribbon">SIMULATION</span><small>Lieu · Château d’Elderwood</small><h4>La Salle des Murmures</h4><em>Une ancienne salle d’étude oubliée sous la bibliothèque</em><p>Cette pièce circulaire possède une acoustique étrange : les conversations prononcées près des murs semblent réapparaître quelques minutes plus tard à l’autre bout de la salle. Des élèves l’utiliseraient pour étudier les manifestations résiduelles de l’Écho.</p><footer>Proposé par : autrejoueur@exemple.fr<br />Source déclarée : découverte lors d’une scène RP, à vérifier avec le lore officiel.</footer><span className="wiki-status">En attente</span><div><button onClick={() => { setDemoPending(false); setMessage('Simulation : la fiche aurait été publiée et serait devenue visible par tous.'); }}><Check /> Publier</button><button onClick={() => { setDemoPending(false); setMessage('Simulation : la proposition aurait été refusée sans modifier les archives.'); }}><X /> Refuser</button></div></article>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
+    </section>
+  </div>;
+}
+function AdminPanel({ close, openModeration }: { close: () => void; openModeration: () => void }) {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [userNotes, setUserNotes] = useState<Note[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    loadAdminUsers().then(setUsers).catch((reason) => setError(reason instanceof Error ? reason.message : 'Impossible de charger les utilisateurs.')).finally(() => setBusy(false));
+  }, []);
+  const inspect = async (user: AdminUser) => {
+    setSelected(user); setExpanded(null); setBusy(true); setError('');
+    try { setUserNotes((await loadAdminNotes(user.user_id)) as Note[]); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Impossible d’ouvrir ce grimoire.'); }
+    finally { setBusy(false); }
+  };
+  const visible = users.filter((user) => `${user.display_name} ${user.email}`.toLowerCase().includes(query.toLowerCase()));
+  const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Jamais';
+  const formatBytes = (value: number) => value < 1024 * 1024 ? `${Math.round(value / 1024)} Ko` : `${(value / 1024 / 1024).toFixed(1)} Mo`;
+  return <div className="overlay admin-overlay">
+    <section className="admin-panel" role="dialog" aria-modal="true" aria-label="Administration des grimoires">
+      <header><div><small>SCEAU DE L’ADMINISTRATEUR</small><h2>Administration</h2><p>Inspecte les grimoires en lecture seule sans te connecter à la place des joueurs.</p></div><button className="close" onClick={close}><X /></button></header>
+      <div className="admin-summary"><span><Users /><b>{users.length}</b><small>comptes</small></span><span><BookOpen /><b>{users.reduce((sum, user) => sum + Number(user.note_count), 0)}</b><small>fiches privées</small></span><button onClick={openModeration}><ShieldAlert /><b>Modérer le wiki</b><small>Ouvrir les propositions</small></button></div>
+      {error && <div className="admin-error"><ShieldAlert /><span><b>Configuration nécessaire</b>{error}<small>Exécute le fichier supabase/admin_migration.sql dans le SQL Editor de Supabase.</small></span></div>}
+      {!selected ? <>
+        <label className="admin-search"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un joueur ou une adresse e-mail…" /></label>
+        <div className="admin-users">{busy && <p>Ouverture du registre…</p>}{!busy && visible.map((user) => <button key={user.user_id} onClick={() => inspect(user)}><span className="admin-avatar">{(user.display_name || user.email || '?').slice(0, 1).toUpperCase()}</span><span><b>{user.display_name || 'Grimoire sans nom'}</b><small>{user.email}</small></span><span><b>{user.note_count}</b><small>fiches</small></span><span><b>{formatBytes(Number(user.storage_bytes))}</b><small>images</small></span><span><b>{formatDate(user.last_sign_in_at)}</b><small>dernière connexion</small></span><Eye /></button>)}</div>
+      </> : <div className="admin-inspection">
+        <header><button onClick={() => { setSelected(null); setUserNotes([]); }}>← Retour aux utilisateurs</button><div><small>MODE INSPECTION · LECTURE SEULE</small><h3>{selected.display_name || selected.email}</h3><p>{selected.email} · inscrit le {formatDate(selected.created_at)}</p></div></header>
+        {busy ? <p>Déchiffrement du grimoire…</p> : <div className="admin-notes">{!userNotes.length && <p>Ce grimoire ne contient aucune fiche.</p>}{userNotes.map((note) => <article className={expanded === note.id ? 'expanded' : ''} key={note.id}><button onClick={() => setExpanded(expanded === note.id ? null : note.id)}>{note.image && <img src={note.image} alt="" />}<span><small>{note.kind}</small><b>{note.title}</b><p>{richPlainText(note.text)}</p></span><Eye /></button>{expanded === note.id && <div className="admin-note-detail"><h4>{note.sub}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(note.text) }} />{note.details?.map((detail, index) => <section key={index}><h4>{detail[0]}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(detail[1]) }} /></section>)}</div>}</article>)}</div>}
+      </div>}
     </section>
   </div>;
 }
