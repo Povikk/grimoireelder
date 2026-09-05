@@ -2174,18 +2174,18 @@ function MagicBoard({ notes, update, remove, add }: {
   const colors: NonNullable<Note['noteColor']>[] = ['or', 'violet', 'bleu', 'vert', 'rose'];
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, note: Note) => {
     if ((event.target as HTMLElement).closest('button,input,textarea')) return;
-    const board = event.currentTarget.parentElement;
-    if (!board) return;
+    const board = event.currentTarget.closest('.chalk-board') as HTMLElement | null;
+    const card = event.currentTarget.closest('.magic-note') as HTMLElement | null;
+    if (!board || !card) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const rect = board.getBoundingClientRect();
-    const card = event.currentTarget.closest('.magic-note') as HTMLElement | null;
     const startX = event.clientX;
     const startY = event.clientY;
-    const initialLeft = card ? card.offsetLeft : ((note.boardX ?? 8) / 100) * rect.width;
-    const initialTop = card ? card.offsetTop : ((note.boardY ?? 10) / 100) * rect.height;
+    const initialLeft = card.offsetLeft;
+    const initialTop = card.offsetTop;
     const move = (moveEvent: PointerEvent) => {
-      const width = card?.offsetWidth || note.boardWidth || 230;
-      const height = card?.offsetHeight || note.boardHeight || 190;
+      const width = card.offsetWidth || note.boardWidth || 230;
+      const height = card.offsetHeight || note.boardHeight || 190;
       const left = Math.max(0, Math.min(rect.width - width, initialLeft + moveEvent.clientX - startX));
       const top = Math.max(0, Math.min(rect.height - height, initialTop + moveEvent.clientY - startY));
       update({ ...note, boardX: (left / rect.width) * 100, boardY: (top / rect.height) * 100 });
