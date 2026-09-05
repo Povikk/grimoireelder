@@ -1727,3 +1727,39 @@ html[data-theme] .tags span[role='button']:focus {
 @media (max-width: 620px) {
   .theme-menu { position: fixed; top: 68px; right: 12px; left: 12px; width: auto; }
 }
+
+/* La navigation peut défiler sans écraser le blason sur les petits écrans. */
+.side {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--house-rgb), .35) transparent;
+}
+.side > .brand,
+.side > .account-gate,
+.side > p,
+.side > button,
+.side > .local,
+.side > .vault-actions {
+  flex-shrink: 0;
+}
+.side > .brand {
+  min-height: 88px;
+  margin-top: 0;
+  padding: 15px 13px;
+}
+.brand > div {
+  min-width: 0;
+  align-self: center;
+}
+.brand b {
+  overflow: hidden;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brand small {
+  margin-top: 6px;
+  line-height: 1.35;
+}
+.side > .account-gate { min-height: 61px; }
