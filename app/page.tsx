@@ -44,7 +44,7 @@ import {
   reviewWikiProposal,
   type WikiSubmission,
 } from '@/lib/supabase';
-type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet';
+type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
 const characterHouses: CharacterHouse[] = [
   'Aerwyn',
@@ -81,6 +81,9 @@ type Note = {
     | 'Oublié';
   source?: string;
   nextAction?: string;
+  incantation?: string;
+  spellDomain?: 'Charme' | 'Défense' | 'Soin' | 'Altération' | 'Élémentaire' | 'Utilitaire' | 'Interdit' | 'Autre';
+  mastery?: 'À étudier' | 'En apprentissage' | 'Instable' | 'Maîtrisé';
   tasks?: { id: string; text: string; done: boolean }[];
   details?: string[][];
 };
@@ -158,12 +161,14 @@ const icons = {
   Lieu: MapPin,
   Connaissance: BookOpen,
   Projet: BriefcaseBusiness,
+  Sort: WandSparkles,
 };
 const statusesByKind: Record<Kind, string[]> = {
   Personnage: ['À rencontrer', 'Rencontré', 'À approfondir', 'Proche', 'Perdu de vue'],
   Lieu: ['À découvrir', 'Visité', 'À explorer', 'Important', 'Dangereux'],
   Connaissance: ['À vérifier', 'Soupçonné', 'Confirmé', 'Contredit', 'Obsolète'],
   Projet: ['Idée', 'À préparer', 'En cours', 'En attente', 'Terminé', 'Abandonné'],
+  Sort: ['À découvrir', 'À apprendre', 'En entraînement', 'Maîtrisé', 'Interdit'],
 };
 
 const normalizeSearch = (value: string) =>
@@ -461,7 +466,7 @@ export default function Home() {
       notes.filter(
         (n) =>
           (section === 'Toutes' || n.kind === section) &&
-          [n.title, n.sub, n.text, ...n.tags]
+          [n.title, n.sub, n.text, n.incantation, n.spellDomain, n.mastery, ...n.tags]
             .join(' ')
             .toLowerCase()
             .includes(q.toLowerCase()),
@@ -481,7 +486,7 @@ export default function Home() {
         score: searchScore(
           q,
           item.title,
-          [item.sub, item.text, ...item.tags].join(' '),
+          [item.sub, item.text, item.incantation, item.spellDomain, item.mastery, ...item.tags].join(' '),
         ),
       })),
       ...lore.map((item) => ({
@@ -650,6 +655,7 @@ export default function Home() {
           ['Lieu', MapPin],
           ['Connaissance', BookOpen],
           ['Projet', BriefcaseBusiness],
+          ['Sort', WandSparkles],
         ].map(([s, I]: any) => (
           <button
             className={section === s ? 'active' : ''}
@@ -1186,6 +1192,12 @@ export default function Home() {
                     {open.knowledge}
                   </span>
                 )}
+                {open.kind === 'Sort' && (
+                  <>
+                    <span><b>Domaine</b>{open.spellDomain || 'Non classé'}</span>
+                    <span><b>Maîtrise</b>{open.mastery || 'À étudier'}</span>
+                  </>
+                )}
               </div>
               <Tags
                 tags={open.tags}
@@ -1196,9 +1208,12 @@ export default function Home() {
                 }}
               />
               <p className="intro">{open.text}</p>
-              {open.kind === 'Connaissance' && open.source && (
+              {open.kind === 'Sort' && open.incantation && (
+                <section className="spell-incantation"><small>INCANTATION</small><p>{open.incantation}</p></section>
+              )}
+              {(open.kind === 'Connaissance' || open.kind === 'Sort') && open.source && (
                 <section className="knowledge-source">
-                  <h3>Comment je le sais</h3>
+                  <h3>{open.kind === 'Sort' ? 'Source d’apprentissage' : 'Comment je le sais'}</h3>
                   <p>{open.source}</p>
                 </section>
               )}
@@ -2296,6 +2311,22 @@ function Editor({
               </select>
             </label>
           )}
+          {d.kind === 'Sort' && (
+            <>
+              <label>
+                Domaine magique
+                <select value={d.spellDomain || 'Charme'} onChange={(e) => setD({ ...d, spellDomain: e.target.value as Note['spellDomain'] })}>
+                  {['Charme', 'Défense', 'Soin', 'Altération', 'Élémentaire', 'Utilitaire', 'Interdit', 'Autre'].map((value) => <option key={value}>{value}</option>)}
+                </select>
+              </label>
+              <label>
+                Niveau de maîtrise
+                <select value={d.mastery || 'À étudier'} onChange={(e) => setD({ ...d, mastery: e.target.value as Note['mastery'] })}>
+                  {['À étudier', 'En apprentissage', 'Instable', 'Maîtrisé'].map((value) => <option key={value}>{value}</option>)}
+                </select>
+              </label>
+            </>
+          )}
           <label>
             Titre
             <input
@@ -2312,6 +2343,13 @@ function Editor({
               onChange={(e) => setD({ ...d, sub: e.target.value })}
             />
           </label>
+          {d.kind === 'Sort' && (
+            <label className="wide spell-formula">
+              Formule / incantation
+              <input value={d.incantation || ''} onChange={(e) => setD({ ...d, incantation: e.target.value })} placeholder="Formule exacte à prononcer avant le sort…" />
+              <small>L’incantation verbale est obligatoire selon le règlement d’Elderwood.</small>
+            </label>
+          )}
           <label className="wide">
             <span className="notes-label"><span>Notes</span><button type="button" className="correct-notes" disabled={correcting || !d.text.trim()} onClick={correctNotes}><SpellCheck2 />{correcting ? 'Correction…' : 'Corriger les fautes'}</button></span>
             <textarea
@@ -2340,9 +2378,9 @@ function Editor({
             {correctionMessage && <small className="correction-message">{correctionMessage}</small>}
             <small className="correction-privacy">Le texte est envoyé à <a href="https://languagetool.org" target="_blank" rel="noreferrer">LanguageTool</a> uniquement lorsque tu demandes une correction.</small>
           </label>
-          {d.kind === 'Connaissance' && (
+          {(d.kind === 'Connaissance' || d.kind === 'Sort') && (
             <label className="wide">
-              Comment mon personnage l’a appris
+              {d.kind === 'Sort' ? 'Source d’apprentissage' : 'Comment mon personnage l’a appris'}
               <input
                 placeholder="Personne, scène, lieu ou date…"
                 value={d.source || ''}
