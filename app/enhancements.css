@@ -1763,3 +1763,31 @@ html[data-theme] .tags span[role='button']:focus {
   line-height: 1.35;
 }
 .side > .account-gate { min-height: 61px; }
+
+/* Maison d'un personnage */
+.house-select {
+  border-left-width: 4px !important;
+  font-weight: 700;
+}
+.house-select.none { border-left-color: #708078 !important; }
+.house-select.aerwyn { border-left-color: #5799eb !important; }
+.house-select.brumval { border-left-color: #56a96c !important; }
+.house-select.falcon { border-left-color: #d8893c !important; }
+.house-select.venatrix { border-left-color: #9862d4 !important; }
+.facts .house-fact {
+  position: relative;
+  overflow: hidden;
+  padding-left: 17px;
+}
+.facts .house-fact::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 4px;
+  background: #708078;
+}
+.facts .house-fact.aerwyn::before { background: #5799eb; }
+.facts .house-fact.brumval::before { background: #56a96c; }
+.facts .house-fact.falcon::before { background: #d8893c; }
+.facts .house-fact.venatrix::before { background: #9862d4; }

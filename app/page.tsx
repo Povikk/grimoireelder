@@ -32,6 +32,13 @@ import {
 import { rules, ruleSections } from './rules';
 import { lore, loreSections } from './lore';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet';
+type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
+const characterHouses: CharacterHouse[] = [
+  'Aerwyn',
+  'Brumval',
+  'Falcon',
+  'Venatrix',
+];
 type HouseTheme = 'aerwyn' | 'brumval' | 'falcon' | 'venatrix';
 const houseThemes: { id: HouseTheme; name: string; motto: string }[] = [
   { id: 'aerwyn', name: 'Aerwyn', motto: 'Honneur & protection' },
@@ -51,6 +58,7 @@ type Note = {
   essential?: boolean;
   status?: 'À découvrir' | 'En cours' | 'Confirmé' | 'Archivé';
   relation?: 'Inconnue' | 'Neutre' | 'Allié' | 'Rival' | 'Famille';
+  house?: CharacterHouse;
   knowledge?:
     | 'Connu en RP'
     | 'Soupçonné'
@@ -1058,6 +1066,12 @@ export default function Home() {
                     {open.relation || 'Inconnue'}
                   </span>
                 )}
+                {open.kind === 'Personnage' && (
+                  <span className={`house-fact ${open.house?.toLowerCase() || 'none'}`}>
+                    <b>Maison</b>
+                    {open.house || 'Sans maison'}
+                  </span>
+                )}
                 {open.kind === 'Connaissance' && open.knowledge && (
                   <span>
                     <b>Connaissance</b>
@@ -1765,7 +1779,19 @@ function Editor({
         className="editor"
         onSubmit={(e) => {
           e.preventDefault();
-          if (d.title.trim()) save(d);
+          if (d.title.trim()) {
+            const tagsWithoutHouse = d.tags.filter(
+              (tag) => !characterHouses.includes(tag as CharacterHouse),
+            );
+            save({
+              ...d,
+              tags:
+                d.kind === 'Personnage' && d.house
+                  ? [...tagsWithoutHouse, d.house]
+                  : tagsWithoutHouse,
+              house: d.kind === 'Personnage' ? d.house : undefined,
+            });
+          }
         }}
       >
         <div className="edithead">
@@ -1803,21 +1829,41 @@ function Editor({
             </select>
           </label>
           {d.kind === 'Personnage' && (
-            <label>
-              Relation
-              <select
-                value={d.relation || 'Inconnue'}
-                onChange={(e) =>
-                  setD({ ...d, relation: e.target.value as Note['relation'] })
-                }
-              >
-                {['Inconnue', 'Neutre', 'Allié', 'Rival', 'Famille'].map(
-                  (x) => (
-                    <option key={x}>{x}</option>
-                  ),
-                )}
-              </select>
-            </label>
+            <>
+              <label>
+                Relation
+                <select
+                  value={d.relation || 'Inconnue'}
+                  onChange={(e) =>
+                    setD({ ...d, relation: e.target.value as Note['relation'] })
+                  }
+                >
+                  {['Inconnue', 'Neutre', 'Allié', 'Rival', 'Famille'].map(
+                    (x) => (
+                      <option key={x}>{x}</option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label className="house-select-label">
+                Maison
+                <select
+                  className={d.house ? `house-select ${d.house.toLowerCase()}` : 'house-select none'}
+                  value={d.house || ''}
+                  onChange={(e) =>
+                    setD({
+                      ...d,
+                      house: (e.target.value || undefined) as CharacterHouse | undefined,
+                    })
+                  }
+                >
+                  <option value="">Pas de maison</option>
+                  {characterHouses.map((house) => (
+                    <option value={house} key={house}>{house}</option>
+                  ))}
+                </select>
+              </label>
+            </>
           )}
           {d.kind === 'Connaissance' && (
             <label>
