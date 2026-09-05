@@ -23,6 +23,7 @@ import {
   Send,
   Check,
   Sparkles,
+  SpellCheck2,
   Star,
   Trash2,
   Users,
@@ -2041,6 +2042,8 @@ function Editor({
 }) {
   const [d, setD] = useState(note);
   const [imageOptimizing, setImageOptimizing] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionMessage, setCorrectionMessage] = useState('');
   const tagChoices = [
     'Élève',
     'Professeur',
@@ -2068,6 +2071,40 @@ function Editor({
       );
     } finally {
       setImageOptimizing(false);
+    }
+  };
+  const correctNotes = async () => {
+    if (!d.text.trim()) return;
+    setCorrecting(true);
+    setCorrectionMessage('Analyse de la plume en cours…');
+    try {
+      const body = new URLSearchParams({ text: d.text, language: 'fr-FR', level: 'picky' });
+      const response = await fetch('https://api.languagetool.org/v2/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+      if (!response.ok) throw new Error('Le correcteur est momentanément indisponible.');
+      const result = await response.json() as { matches?: { offset: number; length: number; message: string; replacements: { value: string }[] }[] };
+      const corrections = (result.matches || []).filter((match) => match.replacements?.[0]);
+      if (!corrections.length) {
+        setCorrectionMessage('Aucune faute détectée.');
+        return;
+      }
+      if (!confirm(`${corrections.length} correction${corrections.length > 1 ? 's' : ''} proposée${corrections.length > 1 ? 's' : ''}. Les appliquer ?\n\nRelis ensuite les noms propres et les termes du lore.`)) {
+        setCorrectionMessage('Corrections annulées.');
+        return;
+      }
+      let corrected = d.text;
+      [...corrections].sort((a, b) => b.offset - a.offset).forEach((match) => {
+        corrected = corrected.slice(0, match.offset) + match.replacements[0].value + corrected.slice(match.offset + match.length);
+      });
+      setD((current) => ({ ...current, text: corrected }));
+      setCorrectionMessage(`${corrections.length} correction${corrections.length > 1 ? 's appliquées' : ' appliquée'}. Relis les noms propres.`);
+    } catch (error) {
+      setCorrectionMessage(error instanceof Error ? error.message : 'Correction impossible.');
+    } finally {
+      setCorrecting(false);
     }
   };
   return (
@@ -2200,12 +2237,14 @@ function Editor({
             />
           </label>
           <label className="wide">
-            Notes
+            <span className="notes-label"><span>Notes</span><button type="button" className="correct-notes" disabled={correcting || !d.text.trim()} onClick={correctNotes}><SpellCheck2 />{correcting ? 'Correction…' : 'Corriger les fautes'}</button></span>
             <textarea
               rows={6}
               value={d.text}
               onChange={(e) => setD({ ...d, text: e.target.value })}
             />
+            {correctionMessage && <small className="correction-message">{correctionMessage}</small>}
+            <small className="correction-privacy">Le texte est envoyé à <a href="https://languagetool.org" target="_blank" rel="noreferrer">LanguageTool</a> uniquement lorsque tu demandes une correction.</small>
           </label>
           {d.kind === 'Connaissance' && (
             <label className="wide">
