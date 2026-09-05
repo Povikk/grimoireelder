@@ -47,6 +47,8 @@ import {
 } from '@/lib/supabase';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort' | 'Note libre';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
+type SchoolYear = 'Première année' | 'Deuxième année' | 'Troisième année' | 'Quatrième année' | 'Cinquième année' | 'Sixième année' | 'Septième année' | 'Personnel' | 'Hors cursus';
+const schoolYears: SchoolYear[] = ['Première année', 'Deuxième année', 'Troisième année', 'Quatrième année', 'Cinquième année', 'Sixième année', 'Septième année', 'Personnel', 'Hors cursus'];
 const characterHouses: CharacterHouse[] = [
   'Aerwyn',
   'Brumval',
@@ -74,6 +76,7 @@ type Note = {
   status?: string;
   relation?: 'Inconnue' | 'Neutre' | 'Allié' | 'Rival' | 'Famille';
   house?: CharacterHouse;
+  schoolYear?: SchoolYear;
   knowledge?:
     | 'Connu en RP'
     | 'Soupçonné'
@@ -109,6 +112,7 @@ const initial: Note[] = [
     essential: true,
     status: 'À approfondir',
     relation: 'Neutre',
+    schoolYear: 'Première année',
     imageSize: 100,
   },
 ];
@@ -122,6 +126,7 @@ const corvinCharacter: Note = {
   essential: true,
   status: 'À approfondir',
   relation: 'Neutre',
+  schoolYear: 'Première année',
   imageSize: 100,
   details: [
     ['Histoire', "Corvin vient d’une famille magique ordinaire. Son père tient une boutique de jeux, jouets et curiosités magiques où Corvin a grandi parmi les cartes, dés, casse-têtes et objets enchantés. Sa mère, Résonante et très organisée, travaille comme secrétaire dans une petite structure du monde magique."],
@@ -249,7 +254,7 @@ const ruleAccent = (section: string) => ({
 }[section] || '#c4a34e');
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]),
-    [section, setSection] = useState('Lore'),
+    [section, setSection] = useState('Accueil'),
     [q, setQ] = useState(''),
     [open, setOpen] = useState<Note | null>(null),
     [searchOpen, setSearchOpen] = useState<SearchDetail | null>(null),
@@ -302,14 +307,16 @@ export default function Home() {
       hash.get('type') === 'signup' || query.get('type') === 'signup';
     const client = getSupabase();
     if (!client) return;
-    client.auth.getSession().then(({ data }) =>
-      setCurrentUser(data.session?.user || null),
-    );
+    client.auth.getSession().then(({ data }) => {
+      const user = data.session?.user || null;
+      setCurrentUser(user);
+      if (user) setSection('Toutes');
+    });
     const { data } = client.auth.onAuthStateChange((event, session) => {
       setCloudReady(false);
       setCurrentUser(session?.user || null);
       if (event === 'SIGNED_IN') setSection('Toutes');
-      if (event === 'SIGNED_OUT') setSection('Lore');
+      if (event === 'SIGNED_OUT') setSection('Accueil');
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
         setAuthOpen(true);
@@ -341,8 +348,10 @@ export default function Home() {
         if (remote.length) {
           const shouldRestoreCorvin = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com';
           let restored = remote.map((note) => {
-            if (!shouldRestoreCorvin || note.id !== 'joueur' || note.title === 'Corvin Wrenfall')
+            if (!shouldRestoreCorvin || note.id !== 'joueur')
               return note;
+            if (note.title === 'Corvin Wrenfall')
+              return note.schoolYear ? note : { ...note, schoolYear: 'Première année' };
             return {
               ...corvinCharacter,
               image: note.image,
@@ -472,7 +481,7 @@ export default function Home() {
       notes.filter(
         (n) =>
           (section === 'Toutes' || n.kind === section) &&
-          [n.title, n.sub, n.text, n.incantation, n.spellDomain, n.mastery, ...n.tags]
+          [n.title, n.sub, n.text, n.schoolYear, n.incantation, n.spellDomain, n.mastery, ...n.tags]
             .join(' ')
             .toLowerCase()
             .includes(q.toLowerCase()),
@@ -492,7 +501,7 @@ export default function Home() {
         score: searchScore(
           q,
           item.title,
-          [item.sub, item.text, item.incantation, item.spellDomain, item.mastery, ...item.tags].join(' '),
+          [item.sub, item.text, item.schoolYear, item.incantation, item.spellDomain, item.mastery, ...item.tags].join(' '),
         ),
       })),
       ...lore.map((item) => ({
@@ -560,6 +569,7 @@ export default function Home() {
       tags: [],
       status: statusesByKind[section === 'Toutes' ? 'Personnage' : (section as Kind)][0],
       relation: 'Inconnue',
+      schoolYear: (section === 'Toutes' || section === 'Personnage') ? 'Première année' : undefined,
       imageSize: 100,
       essential: false,
     });
@@ -573,6 +583,7 @@ export default function Home() {
       tags: [],
       status: statusesByKind[kind][0],
       relation: 'Inconnue',
+      schoolYear: kind === 'Personnage' ? 'Première année' : undefined,
       imageSize: 100,
       essential: false,
     });
@@ -691,6 +702,9 @@ export default function Home() {
           <StickyNote /> Notes diverses<em>{notes.filter((note) => note.kind === 'Note libre').length}</em>
         </button>}
         <p className="archive-label">ARCHIVES OFFICIELLES</p>
+        {!currentUser && <button className={section === 'Accueil' ? 'active' : ''} onClick={() => { setSection('Accueil'); setMenu(false); setQ(''); }}>
+          <Sparkles /> Accueil
+        </button>}
         <button
           className={section === 'Règlement' ? 'active' : ''}
           onClick={() => {
@@ -921,6 +935,8 @@ export default function Home() {
                 )}
               </div>
             </section>
+          ) : !currentUser && section === 'Accueil' ? (
+            <PublicLanding connect={() => setAuthOpen(true)} explore={() => setSection('Lore')} school={() => setSection('Elderwood')} />
           ) : section === 'Règlement' ? (
             <RulesView query={q} />
           ) : section === 'Lore' ? (
@@ -1202,6 +1218,9 @@ export default function Home() {
                     <b>Maison</b>
                     {open.house || 'Sans maison'}
                   </span>
+                )}
+                {open.kind === 'Personnage' && (
+                  <span><b>Année</b>{open.schoolYear || 'Non renseignée'}</span>
                 )}
                 {open.kind === 'Connaissance' && open.knowledge && (
                   <span>
@@ -1505,6 +1524,21 @@ function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, cl
       <div className="wiki-list"><div className="wiki-list-heading"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{admin && !demoPending && <button onClick={() => { setDemoPending(true); setMessage(''); }}><Sparkles /> Voir une demande d’exemple</button>}</div>{!visible.length && !demoPending && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{admin && demoPending && <article className="wiki-pending wiki-demo"><span className="demo-ribbon">SIMULATION</span><small>Lieu · Château d’Elderwood</small><h4>La Salle des Murmures</h4><em>Une ancienne salle d’étude oubliée sous la bibliothèque</em><p>Cette pièce circulaire possède une acoustique étrange : les conversations prononcées près des murs semblent réapparaître quelques minutes plus tard à l’autre bout de la salle. Des élèves l’utiliseraient pour étudier les manifestations résiduelles de l’Écho.</p><footer>Proposé par : autrejoueur@exemple.fr<br />Source déclarée : découverte lors d’une scène RP, à vérifier avec le lore officiel.</footer><span className="wiki-status">En attente</span><div><button onClick={() => { setDemoPending(false); setMessage('Simulation : la fiche aurait été publiée et serait devenue visible par tous.'); }}><Check /> Publier</button><button onClick={() => { setDemoPending(false); setMessage('Simulation : la proposition aurait été refusée sans modifier les archives.'); }}><X /> Refuser</button></div></article>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
     </section>
   </div>;
+}
+function PublicLanding({ connect, explore, school }: { connect: () => void; explore: () => void; school: () => void }) {
+  return <section className="public-landing">
+    <section className="public-hero">
+      <img src={`${import.meta.env.BASE_URL}elderwood-archive.png`} alt="Elderwood dans la forêt, de nuit" />
+      <div><small>LE GRIMOIRE DES RÉSONANTS</small><h1>Tout Elderwood.<br /><em>Une histoire rien qu’à toi.</em></h1><p>Explore les connaissances communes du serveur, puis construis ton propre grimoire privé au fil de tes rencontres et de tes aventures.</p><div><button onClick={connect}><WandSparkles /> Ouvrir mon grimoire</button><button onClick={explore}>Explorer le wiki <ChevronRight /></button></div></div>
+      <span className="public-rune">✦</span>
+    </section>
+    <section className="public-pillars">
+      <article className="pillar-wiki"><span><Compass /></span><small>UN SAVOIR PARTAGÉ</small><h2>Le wiki d’Elderwood</h2><p>Lore, règlement, maisons, créatures, chronologie et lieux officiels : les informations utiles sont accessibles à tous et réunies dans des archives faciles à rechercher.</p><ul><li>Contenu commun à tous les joueurs</li><li>Recherche dans toutes les archives</li><li>Propositions vérifiées par un administrateur</li></ul><button onClick={explore}>Parcourir les archives <ChevronRight /></button></article>
+      <article className="pillar-private"><span><LockKeyhole /></span><small>TES ARCHIVES PERSONNELLES</small><h2>Ton grimoire privé</h2><p>Une fois connecté, conserve tout ce que ton personnage apprend sans le montrer aux autres : rencontres, projets, sorts, images, pistes et notes libres.</p><ul><li>Fiches et images privées</li><li>Tableau de notes magiques</li><li>Synchronisation sécurisée avec ton compte</li></ul><button onClick={connect}>Créer mon grimoire <ChevronRight /></button></article>
+    </section>
+    <section className="public-steps"><div><small>COMMENT ÇA MARCHE ?</small><h2>Entre dans les archives en quelques secondes</h2></div>{[['01','Explore','Consulte librement le lore et les règles.'],['02','Crée ton compte','Scelle un espace personnel et privé.'],['03','Écris ton histoire','Ajoute les gens, lieux, sorts et souvenirs rencontrés.']].map(([number,title,text]) => <article key={number}><b>{number}</b><span><h3>{title}</h3><p>{text}</p></span></article>)}</section>
+    <section className="public-cta"><div><small>L’ÉCOLE T’ATTEND</small><h2>Commence par découvrir Elderwood</h2><p>Ses maisons, ses salles et les secrets connus de son île.</p></div><button onClick={school}><Castle /> Entrer dans l’école</button></section>
+  </section>;
 }
 function WelcomeTour({
   step,
@@ -2339,6 +2373,12 @@ function Editor({
                   {characterHouses.map((house) => (
                     <option value={house} key={house}>{house}</option>
                   ))}
+                </select>
+              </label>
+              <label>
+                Année scolaire
+                <select value={d.schoolYear || 'Première année'} onChange={(e) => setD({ ...d, schoolYear: e.target.value as SchoolYear })}>
+                  {schoolYears.map((year) => <option value={year} key={year}>{year}</option>)}
                 </select>
               </label>
             </>
