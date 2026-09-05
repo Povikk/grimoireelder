@@ -220,54 +220,8 @@ const searchScore = (query: string, title: string, content: string) => {
     0,
   );
 };
-const canonicalPlaces: Note[] = [
-  {
-    id: 'elderwood-school',
-    kind: 'Lieu',
-    title: 'Elderwood',
-    sub: 'École de sorcellerie · Royaume-Uni',
-    text:
-      lore.find(
-        (entry) => entry.section === 'École' && entry.title === 'Elderwood',
-      )?.text || '',
-    tags: ['École', 'Château', 'Source de Vehr'],
-    status: 'Confirmé',
-    imageSize: 100,
-  },
-  ...lore
-    .filter((entry) => entry.section === 'Lieux')
-    .map((entry, index) => ({
-      id: `elderwood-place-${index}`,
-      kind: 'Lieu' as const,
-      title: entry.title,
-      sub: entry.subtitle || 'Lieu d’Elderwood',
-      text: entry.text,
-      tags: [
-        'Elderwood',
-        ['Brûlebrume', 'Terrain de Razeball', 'Shedwood'].includes(entry.title)
-          ? 'Île'
-          : 'Château',
-      ],
-      status: 'Confirmé' as const,
-      imageSize: 100,
-    })),
-];
-
-const mergeCanonicalPlaces = (saved: Note[]) => {
-  const existingPlaces = new Set(
-    saved
-      .filter((note) => note.kind === 'Lieu')
-      .map((note) => normalizeSearch(note.title)),
-  );
-  return [
-    ...canonicalPlaces.filter(
-      (place) => !existingPlaces.has(normalizeSearch(place.title)),
-    ),
-    ...saved,
-  ];
-};
 export default function Home() {
-  const [notes, setNotes] = useState(() => [...canonicalPlaces]),
+  const [notes, setNotes] = useState<Note[]>([]),
     [section, setSection] = useState('Lore'),
     [q, setQ] = useState(''),
     [open, setOpen] = useState<Note | null>(null),
@@ -343,7 +297,7 @@ export default function Home() {
     if (!currentUser) {
       setCloudReady(false);
       setSyncState('local');
-      setNotes([...canonicalPlaces]);
+      setNotes([]);
       setProfileName('');
       setOpen(null);
       setEdit(null);
@@ -370,14 +324,14 @@ export default function Home() {
             restored = [corvinCharacter, ...restored];
           if (restored.length !== remote.length || restored.some((note, index) => note !== remote[index]))
             await replacePrivateNotes(currentUser, restored);
-          setNotes(mergeCanonicalPlaces(restored));
+          setNotes(restored);
         } else {
           const starter = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com'
             ? [corvinCharacter]
             : initial;
           await replacePrivateNotes(currentUser, starter);
           if (!active) return;
-          setNotes(mergeCanonicalPlaces(starter));
+          setNotes(starter);
         }
         const identity =
           currentUser.user_metadata?.display_name ||
