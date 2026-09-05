@@ -256,6 +256,7 @@ export default function Home() {
     [themeOpen, setThemeOpen] = useState(false),
     [greeting, setGreeting] = useState('Bienvenue'),
     [authOpen, setAuthOpen] = useState(false),
+    [passwordRecovery, setPasswordRecovery] = useState(false),
     [profileName, setProfileName] = useState(''),
     [currentUser, setCurrentUser] = useState<User | null>(null),
     [cloudReady, setCloudReady] = useState(false),
@@ -304,9 +305,13 @@ export default function Home() {
     client.auth.getSession().then(({ data }) =>
       setCurrentUser(data.session?.user || null),
     );
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
+    const { data } = client.auth.onAuthStateChange((event, session) => {
       setCloudReady(false);
       setCurrentUser(session?.user || null);
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+        setAuthOpen(true);
+      }
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -1353,7 +1358,11 @@ export default function Home() {
           name={profileName}
           user={currentUser}
           configured={isSupabaseConfigured}
-          cancel={() => setAuthOpen(false)}
+          passwordRecovery={passwordRecovery}
+          cancel={() => {
+            setAuthOpen(false);
+            setPasswordRecovery(false);
+          }}
           save={async (name) => {
             setProfileName(name);
             localStorage.setItem('elderwood-profile-name', name);
@@ -1487,12 +1496,14 @@ function AuthPanel({
   name,
   user,
   configured,
+  passwordRecovery,
   cancel,
   save,
 }: {
   name: string;
   user: User | null;
   configured: boolean;
+  passwordRecovery: boolean;
   cancel: () => void;
   save: (name: string) => Promise<void>;
 }) {
@@ -1502,6 +1513,44 @@ function AuthPanel({
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const authRedirectUrl = () =>
+    window.location.hostname === 'localhost'
+      ? 'https://povikk.github.io/grimoireelder/'
+      : new URL(import.meta.env.BASE_URL, window.location.origin).href;
+  const requestPasswordReset = async () => {
+    const client = getSupabase();
+    if (!client || !email) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: authRedirectUrl(),
+      });
+      if (error) throw error;
+      setMessage('Une lettre de récupération vient de partir. Consulte aussi tes courriers indésirables.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Envoi impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const chooseNewPassword = async () => {
+    const client = getSupabase();
+    if (!client) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      const { error } = await client.auth.updateUser({ password });
+      if (error) throw error;
+      setMessage('Ton nouveau sceau est posé. Le grimoire est de nouveau accessible.');
+      setPassword('');
+      window.setTimeout(cancel, 1100);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Modification impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
   const authenticate = async () => {
     const client = getSupabase();
     if (!client) return;
@@ -1513,10 +1562,7 @@ function AuthPanel({
         if (error) throw error;
         cancel();
       } else {
-        const emailRedirectTo =
-          window.location.hostname === 'localhost'
-            ? 'https://povikk.github.io/grimoireelder/'
-            : new URL(import.meta.env.BASE_URL, window.location.origin).href;
+        const emailRedirectTo = authRedirectUrl();
         const { data, error } = await client.auth.signUp({
           email,
           password,
@@ -1558,6 +1604,19 @@ function AuthPanel({
               <small>Ajoute l’URL du projet et la clé publique dans le fichier .env.local.</small>
             </span>
           </div>
+        ) : passwordRecovery ? (
+          <form onSubmit={(event) => { event.preventDefault(); chooseNewPassword(); }}>
+            <p className="auth-connected">Choisis un nouveau mot de passe pour briser l’ancien sceau.</p>
+            <label htmlFor="grimoire-new-password">Nouveau mot de passe</label>
+            <div className="auth-input">
+              <LockKeyhole />
+              <input id="grimoire-new-password" type="password" autoFocus value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
+            </div>
+            {message && <p className="auth-message">{message}</p>}
+            <button className="auth-submit" disabled={busy || password.length < 8}>
+              {busy ? 'Nouveau sceau…' : 'Choisir ce nouveau mot de passe'} <ChevronRight />
+            </button>
+          </form>
         ) : user ? (
           <>
             <p className="auth-connected">Connecté avec <b>{user.email}</b>. Tes fiches et tes images sont privées et synchronisées.</p>
@@ -1595,6 +1654,11 @@ function AuthPanel({
                 {busy ? 'Ouverture…' : mode === 'login' ? 'Entrer dans mon grimoire' : 'Créer mon grimoire'} <ChevronRight />
               </button>
             </form>
+            {mode === 'login' && (
+              <button className="auth-forgot" disabled={busy || !email} onClick={requestPasswordReset}>
+                Mot de passe oublié ? Envoyer une lettre de récupération
+              </button>
+            )}
           </>
         )}
       </section>
