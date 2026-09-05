@@ -318,7 +318,8 @@ export default function Home() {
       setAuthResolved(true);
     }).catch(() => setAuthResolved(true));
     const { data } = client.auth.onAuthStateChange((event, session) => {
-      setAuthResolved(true);
+      if (event === 'SIGNED_IN')
+        document.documentElement.classList.remove('grimoire-ready');
       setCloudReady(false);
       setCurrentUser(session?.user || null);
       if (event === 'SIGNED_IN') setSection('Toutes');

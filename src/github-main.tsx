@@ -12,5 +12,3 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-
-window.setTimeout(() => document.documentElement.classList.add('grimoire-ready'), 1800);

@@ -22,7 +22,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('elderwood-house-theme');if(!['aerwyn','brumval','falcon','venatrix'].includes(t))t='falcon';document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='falcon'}setTimeout(function(){document.documentElement.classList.add('grimoire-ready')},1800)})();`,
+            __html: `(function(){try{var t=localStorage.getItem('elderwood-house-theme');if(!['aerwyn','brumval','falcon','venatrix'].includes(t))t='falcon';document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='falcon'}})();`,
           }}
         />
       </head>
