@@ -6,6 +6,7 @@ import {
   Camera,
   Castle,
   ChevronRight,
+  CircleHelp,
   Compass,
   Dices,
   Download,
@@ -231,7 +232,9 @@ export default function Home() {
     [dark, setDark] = useState(true),
     [greeting, setGreeting] = useState('Bienvenue'),
     [authOpen, setAuthOpen] = useState(false),
-    [profileName, setProfileName] = useState('');
+    [profileName, setProfileName] = useState(''),
+    [tourOpen, setTourOpen] = useState(false),
+    [tourStep, setTourStep] = useState(0);
   useEffect(() => {
     try {
       const s = localStorage.getItem('elderwood-grimoire');
@@ -252,6 +255,7 @@ export default function Home() {
       const savedTheme = localStorage.getItem('elderwood-dark');
       const savedProfile = localStorage.getItem('elderwood-profile-name');
       if (savedProfile) setProfileName(savedProfile);
+      if (!localStorage.getItem('elderwood-onboarding-done')) setTourOpen(true);
       const night = savedTheme === null ? true : savedTheme === 'true';
       setDark(night);
       document.documentElement.classList.toggle('dark', night);
@@ -293,7 +297,7 @@ export default function Home() {
     }
   }, [q]);
   useEffect(() => {
-    if (!open && !edit && !searchOpen && !authOpen) return;
+    if (!open && !edit && !searchOpen && !authOpen && !tourOpen) return;
     const previousOverflow = document.body.style.overflow;
     const previousPadding = document.body.style.paddingRight;
     const scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -304,7 +308,8 @@ export default function Home() {
         if (edit) setEdit(null);
         else if (open) setOpen(null);
         else if (searchOpen) setSearchOpen(null);
-        else setAuthOpen(false);
+        else if (authOpen) setAuthOpen(false);
+        else setTourOpen(false);
       }
     };
     window.addEventListener('keydown', closeOnEscape);
@@ -313,7 +318,7 @@ export default function Home() {
       document.body.style.paddingRight = previousPadding;
       window.removeEventListener('keydown', closeOnEscape);
     };
-  }, [open, edit, searchOpen, authOpen]);
+  }, [open, edit, searchOpen, authOpen, tourOpen]);
   const toggleDark = () =>
     setDark((v) => {
       const next = !v;
@@ -408,8 +413,29 @@ export default function Home() {
       imageSize: 100,
       essential: false,
     });
+  const addKind = (kind: Kind) =>
+    setEdit({
+      id: crypto.randomUUID(),
+      kind,
+      title: '',
+      sub: '',
+      text: '',
+      tags: [],
+      status: kind === 'Projet' ? 'En cours' : 'À découvrir',
+      relation: 'Inconnue',
+      imageSize: 100,
+      essential: false,
+    });
   const mainCharacter = notes.find((note) => note.id === 'joueur');
   const characterName = mainCharacter?.title?.split(' ')[0] || 'voyageur';
+  const characterReady =
+    !!mainCharacter?.title &&
+    !['Nom à définir', 'Mon personnage'].includes(mainCharacter.title);
+  const closeTour = () => {
+    localStorage.setItem('elderwood-onboarding-done', 'true');
+    setTourOpen(false);
+    setTourStep(0);
+  };
   const addPhotos = (files: FileList | File[]) =>
     Array.from(files)
       .filter((file) => file.type.startsWith('image/'))
@@ -488,7 +514,7 @@ export default function Home() {
           </span>
           <ChevronRight />
         </button>
-        <p>LE GRIMOIRE</p>
+        <p>MON GRIMOIRE</p>
         {[
           ['Toutes', LayoutDashboard],
           ['Personnage', Users],
@@ -514,6 +540,7 @@ export default function Home() {
             </em>
           </button>
         ))}
+        <p className="archive-label">ARCHIVES OFFICIELLES</p>
         <button
           className={section === 'Règlement' ? 'active' : ''}
           onClick={() => {
@@ -578,6 +605,7 @@ export default function Home() {
           <label>
             <Search />
             <input
+              id="grimoire-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Rechercher une personne, un lieu, un souvenir…"
@@ -594,6 +622,17 @@ export default function Home() {
             aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
           >
             {dark ? <Sun /> : <Moon />}
+          </button>
+          <button
+            className="help-toggle"
+            onClick={() => {
+              setTourStep(0);
+              setTourOpen(true);
+            }}
+            aria-label="Découvrir le fonctionnement du grimoire"
+            title="Comment fonctionne le grimoire ?"
+          >
+            <CircleHelp />
           </button>
           {!['Règlement', 'Lore', 'Elderwood'].includes(section) && (
             <button className="primary" onClick={add}>
@@ -734,16 +773,59 @@ export default function Home() {
                         {greeting}, {characterName}.
                       </h1>
                       <p>
-                        Ton grimoire conserve {notes.length} fragment
-                        {notes.length !== 1 && 's'} de ton histoire.
+                        {notes.filter((n) => n.kind === 'Personnage').length}{' '}
+                        personnage · {notes.filter((n) => n.kind === 'Lieu').length}{' '}
+                        lieux · {notes.filter((n) => n.kind === 'Projet').length}{' '}
+                        projet
                       </p>
                       <button
-                        onClick={() => mainCharacter && setOpen(mainCharacter)}
+                        onClick={() =>
+                          mainCharacter &&
+                          (characterReady
+                            ? setOpen(mainCharacter)
+                            : setEdit(mainCharacter))
+                        }
                       >
-                        Ouvrir mon personnage <ChevronRight />
+                        {characterReady
+                          ? 'Ouvrir mon personnage'
+                          : 'Créer mon personnage'}{' '}
+                        <ChevronRight />
                       </button>
                     </div>
                     <Dices className="seal" />
+                  </section>
+                  <section className="first-actions" aria-label="Actions rapides">
+                    <button
+                      onClick={() =>
+                        document.getElementById('grimoire-search')?.focus()
+                      }
+                    >
+                      <Search />
+                      <span>
+                        <small>RETROUVER</small>
+                        <b>Une information</b>
+                        <em>Lore, règle, personne ou lieu</em>
+                      </span>
+                      <ChevronRight />
+                    </button>
+                    <button onClick={() => addKind('Personnage')}>
+                      <Users />
+                      <span>
+                        <small>MÉMORISER</small>
+                        <b>Une rencontre</b>
+                        <em>Relation, détails et portrait</em>
+                      </span>
+                      <ChevronRight />
+                    </button>
+                    <button onClick={() => addKind('Projet')}>
+                      <BriefcaseBusiness />
+                      <span>
+                        <small>PRÉPARER</small>
+                        <b>Une scène RP</b>
+                        <em>Objectifs, pistes et étapes</em>
+                      </span>
+                      <ChevronRight />
+                    </button>
                   </section>
                   <div className="heading">
                     <div>
@@ -1088,6 +1170,29 @@ export default function Home() {
           </article>
         </div>
       )}
+      {tourOpen && (
+        <WelcomeTour
+          step={tourStep}
+          name={profileName}
+          setStep={setTourStep}
+          saveName={(name) => {
+            setProfileName(name);
+            localStorage.setItem('elderwood-profile-name', name);
+          }}
+          close={closeTour}
+          createCharacter={() => {
+            closeTour();
+            if (mainCharacter) setEdit(mainCharacter);
+          }}
+          startSearch={() => {
+            closeTour();
+            setTimeout(
+              () => document.getElementById('grimoire-search')?.focus(),
+              50,
+            );
+          }}
+        />
+      )}
       {authOpen && (
         <AuthPanel
           name={profileName}
@@ -1115,6 +1220,109 @@ export default function Home() {
         />
       )}
     </main>
+  );
+}
+function WelcomeTour({
+  step,
+  name,
+  setStep,
+  saveName,
+  close,
+  createCharacter,
+  startSearch,
+}: {
+  step: number;
+  name: string;
+  setStep: (step: number) => void;
+  saveName: (name: string) => void;
+  close: () => void;
+  createCharacter: () => void;
+  startSearch: () => void;
+}) {
+  const [draft, setDraft] = useState(name);
+  return (
+    <div className="overlay welcome-overlay">
+      <section className="welcome-card" role="dialog" aria-modal="true">
+        <button className="tour-skip" onClick={close}>Passer le guide</button>
+        <div className="tour-progress" aria-label={`Étape ${step + 1} sur 3`}>
+          {[0, 1, 2].map((item) => (
+            <i className={item <= step ? 'active' : ''} key={item} />
+          ))}
+        </div>
+        {step === 0 && (
+          <div className="tour-page">
+            <div className="tour-mark"><WandSparkles /><span>✦</span></div>
+            <small>BIENVENUE À ELDERWOOD</small>
+            <h2>À qui appartient ce grimoire&nbsp;?</h2>
+            <p>
+              Ton nom personnalise l’accueil. Pour l’instant, tout reste
+              uniquement sur cet appareil.
+            </p>
+            <label htmlFor="welcome-name">Ton nom ou pseudonyme</label>
+            <div className="tour-input">
+              <Sparkles />
+              <input
+                id="welcome-name"
+                autoFocus
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="Ex. Corvin"
+                maxLength={40}
+              />
+            </div>
+            <button
+              className="tour-primary"
+              disabled={!draft.trim()}
+              onClick={() => {
+                saveName(draft.trim());
+                setStep(1);
+              }}
+            >
+              Continuer <ChevronRight />
+            </button>
+          </div>
+        )}
+        {step === 1 && (
+          <div className="tour-page">
+            <div className="tour-mark"><BookOpen /></div>
+            <small>UN GRIMOIRE, DEUX ESPACES</small>
+            <h2>Tu sais toujours où tu écris.</h2>
+            <div className="tour-worlds">
+              <article>
+                <Users />
+                <span><b>Mon grimoire</b><p>Tes personnages, relations, projets et souvenirs.</p></span>
+              </article>
+              <article>
+                <Castle />
+                <span><b>Archives officielles</b><p>Le lore, les règles et les lieux d’Elderwood.</p></span>
+              </article>
+            </div>
+            <button className="tour-primary" onClick={() => setStep(2)}>
+              J’ai compris <ChevronRight />
+            </button>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="tour-page">
+            <div className="tour-mark"><Compass /></div>
+            <small>TON PREMIER PAS</small>
+            <h2>Que veux-tu faire maintenant&nbsp;?</h2>
+            <p>Tu pourras relancer ce guide avec le bouton <CircleHelp /> en haut.</p>
+            <div className="tour-choices">
+              <button onClick={createCharacter}>
+                <Users /><span><b>Créer mon personnage</b><small>Compléter ma fiche principale</small></span><ChevronRight />
+              </button>
+              <button onClick={startSearch}>
+                <Search /><span><b>Explorer les archives</b><small>Rechercher dans tout Elderwood</small></span><ChevronRight />
+              </button>
+              <button onClick={close}>
+                <LayoutDashboard /><span><b>Découvrir librement</b><small>Entrer sur la vue d’ensemble</small></span><ChevronRight />
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 function AuthPanel({
