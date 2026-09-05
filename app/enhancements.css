@@ -545,6 +545,38 @@
   background: #21352e;
   color: #c5d1cb;
 }
+
+/* Navigation d’archives : rangées souples sur ordinateur, ruban discret sur mobile. */
+.lore-tabs,
+.rule-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+  scrollbar-width: none;
+}
+.lore-tabs::-webkit-scrollbar,
+.rule-tabs::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 720px) {
+  .lore-tabs,
+  .rule-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 14px,
+      #000 calc(100% - 24px),
+      transparent
+    );
+  }
+  .lore-tabs button,
+  .rule-tabs button {
+    scroll-snap-align: start;
+  }
+}
 .task-editor > div button {
   display: grid;
   place-items: center;
