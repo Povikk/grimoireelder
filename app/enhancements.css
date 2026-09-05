@@ -178,7 +178,7 @@
 }
 .actions {
   display: grid;
-  grid-template-columns: max-content max-content 42px;
+  grid-template-columns: max-content max-content max-content 1fr 42px;
   align-items: center;
   gap: 8px;
   padding-top: 18px;
@@ -227,6 +227,7 @@
   background: #315a4f;
 }
 .dark .actions .action-delete {
+  grid-column: -1;
   width: 42px;
   padding: 0;
   border-color: rgba(189, 91, 78, 0.3);
@@ -240,6 +241,12 @@
 @media (max-width: 540px) {
   .actions {
     grid-template-columns: 1fr 1fr 42px;
+  }
+  .actions .action-wiki {
+    grid-column: 1 / -1;
+  }
+  .actions .action-delete {
+    grid-column: 3;
   }
 }
 
