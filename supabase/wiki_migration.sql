@@ -22,4 +22,6 @@ create policy "Authors see their proposals" on public.wiki_submissions for selec
 create policy "Admins see all proposals" on public.wiki_submissions for select using (public.is_wiki_admin());
 create policy "Users submit proposals" on public.wiki_submissions for insert with check (auth.uid() = created_by and status = 'pending');
 create policy "Admins moderate proposals" on public.wiki_submissions for update using (public.is_wiki_admin()) with check (public.is_wiki_admin());
-insert into public.wiki_admins(user_id) select id from auth.users order by created_at asc limit 1 on conflict do nothing;
+insert into public.wiki_admins(user_id)
+select id from auth.users where lower(email) = 'jonathan.ragot@gmail.com'
+on conflict do nothing;

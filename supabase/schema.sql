@@ -93,5 +93,5 @@ using (public.is_wiki_admin()) with check (public.is_wiki_admin());
 
 -- Le premier compte existant devient administrateur. Remplace cette ligne si besoin.
 insert into public.wiki_admins(user_id)
-select id from auth.users order by created_at asc limit 1
+select id from auth.users where lower(email) = 'jonathan.ragot@gmail.com'
 on conflict do nothing;

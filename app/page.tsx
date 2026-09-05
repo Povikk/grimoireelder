@@ -106,6 +106,28 @@ const initial: Note[] = [
     imageSize: 100,
   },
 ];
+const corvinCharacter: Note = {
+  id: 'joueur',
+  kind: 'Personnage',
+  title: 'Corvin Wrenfall',
+  sub: 'Le joueur du hasard · 15 ans · Première année',
+  text: "Jeune Résonant britannique, sociable, joueur et observateur. Corvin aime moins gagner que l’instant où le résultat n’existe pas encore. Il garde toujours sur lui la vieille pièce confiée par son père.",
+  tags: ['Élève', 'Résonant', 'Jeux', 'Hasard', 'À suivre'],
+  essential: true,
+  status: 'À découvrir',
+  relation: 'Neutre',
+  imageSize: 100,
+  details: [
+    ['Histoire', "Corvin vient d’une famille magique ordinaire. Son père tient une boutique de jeux, jouets et curiosités magiques où Corvin a grandi parmi les cartes, dés, casse-têtes et objets enchantés. Sa mère, Résonante et très organisée, travaille comme secrétaire dans une petite structure du monde magique."],
+    ['La vieille pièce', "Avant son départ pour Elderwood, son père lui a confié une pièce ancienne dont personne ne connaît vraiment l’origine. D’abord simple souvenir familial, elle pourrait prendre une place croissante dans ses choix et devenir presque un rituel."],
+    ['Caractère', "Sociable et curieux, il aime le bluff, les défis et les règles improvisées. Il observe davantage les réactions des joueurs que le résultat : qui hésite, qui triche, qui refuse et qui se laisse entraîner."],
+    ['Pourquoi Elderwood ?', "Elderwood est pour lui une partie dont il ignore encore les règles : de nouveaux élèves, des rivalités, des groupes et des habitudes à comprendre, autant qu’un lieu où apprendre à maîtriser son Flux."],
+    ['Rapport au Flux', "Corvin ne contrôle ni la chance ni les probabilités. Lorsqu’il hésite, il pourrait cependant laisser une pièce, une carte ou un dé décider de la manière dont il emploie sa magie."],
+    ['Évolution possible', "Le jeu pourrait devenir pari, puis influence. En découvrant qu’une règle suffit parfois à diviser un groupe, Corvin pourrait provoquer rivalités et conséquences sans sembler diriger. Le hasard deviendrait alors une porte vers le chaos, jusqu’à lui paraître plus honnête que les êtres humains."],
+    ['Objectifs', "Créer un club de jeux, organiser défis et tournois, réunir des élèves qui ne se fréquentent pas, inventer ses propres règles et observer jusqu’où chacun est prêt à aller pour honorer un pari."],
+    ['Anecdotes', "Il fait parfois pile ou face pour des décisions inutiles, préfère apprendre les règles en jouant, ajoute volontiers une règle à un jeu qui fonctionnait déjà et s’ennuie davantage d’une partie prévisible que d’une défaite."],
+  ],
+};
 const details = [
   [
     'Identité',
@@ -336,11 +358,24 @@ export default function Home() {
         const remote = (await loadPrivateNotes(currentUser)) as Note[];
         if (!active) return;
         if (remote.length) {
-          setNotes(mergeCanonicalPlaces(remote));
+          const shouldRestoreCorvin = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com';
+          let restored = remote.map((note) =>
+            shouldRestoreCorvin && note.id === 'joueur' && ['Mon personnage', 'Nom à définir'].includes(note.title)
+              ? corvinCharacter
+              : note,
+          );
+          if (shouldRestoreCorvin && !restored.some((note) => note.id === 'joueur'))
+            restored = [corvinCharacter, ...restored];
+          if (restored.length !== remote.length || restored.some((note, index) => note !== remote[index]))
+            await replacePrivateNotes(currentUser, restored);
+          setNotes(mergeCanonicalPlaces(restored));
         } else {
-          await replacePrivateNotes(currentUser, initial);
+          const starter = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com'
+            ? [corvinCharacter]
+            : initial;
+          await replacePrivateNotes(currentUser, starter);
           if (!active) return;
-          setNotes(mergeCanonicalPlaces(initial));
+          setNotes(mergeCanonicalPlaces(starter));
         }
         const identity =
           currentUser.user_metadata?.display_name ||
