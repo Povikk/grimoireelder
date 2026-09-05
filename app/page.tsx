@@ -2071,6 +2071,7 @@ function Editor({
   type CorrectionMatch = { offset: number; length: number; message: string; replacements: { value: string }[] };
   const [correctionReview, setCorrectionReview] = useState<CorrectionMatch[]>([]);
   const [acceptedCorrections, setAcceptedCorrections] = useState<Set<number>>(new Set());
+  const [selectedReplacements, setSelectedReplacements] = useState<Record<number, number>>({});
   const tagChoices = [
     'Élève',
     'Professeur',
@@ -2123,6 +2124,7 @@ function Editor({
       }
       setCorrectionReview(corrections);
       setAcceptedCorrections(new Set());
+      setSelectedReplacements({});
       setCorrectionMessage(`${corrections.length} proposition${corrections.length > 1 ? 's' : ''} à vérifier.`);
     } catch (error) {
       setCorrectionMessage(error instanceof Error ? error.message : 'Correction impossible.');
@@ -2137,12 +2139,14 @@ function Editor({
       .filter(({ index }) => acceptedCorrections.has(index))
       .sort((a, b) => b.match.offset - a.match.offset)
       .forEach(({ match }) => {
-        corrected = corrected.slice(0, match.offset) + match.replacements[0].value + corrected.slice(match.offset + match.length);
+        const replacementIndex = selectedReplacements[index] || 0;
+        corrected = corrected.slice(0, match.offset) + match.replacements[replacementIndex].value + corrected.slice(match.offset + match.length);
       });
     const count = acceptedCorrections.size;
     setD((current) => ({ ...current, text: corrected }));
     setCorrectionReview([]);
     setAcceptedCorrections(new Set());
+    setSelectedReplacements({});
     setCorrectionMessage(`${count} correction${count > 1 ? 's appliquées' : ' appliquée'}.`);
   };
   return (
@@ -2304,7 +2308,7 @@ function Editor({
             <textarea
               rows={6}
               value={d.text}
-              onChange={(e) => { setD({ ...d, text: e.target.value }); setCorrectionReview([]); setAcceptedCorrections(new Set()); }}
+              onChange={(e) => { setD({ ...d, text: e.target.value }); setCorrectionReview([]); setAcceptedCorrections(new Set()); setSelectedReplacements({}); }}
             />
             {!!correctionReview.length && <section className="correction-workshop">
               <div className="correction-preview">{(() => {
@@ -2313,7 +2317,7 @@ function Editor({
                 correctionReview.forEach((match, index) => {
                   parts.push(d.text.slice(cursor, match.offset));
                   const before = d.text.slice(match.offset, match.offset + match.length);
-                  const after = match.replacements[0].value;
+                  const after = match.replacements[selectedReplacements[index] || 0].value;
                   parts.push(<mark className={acceptedCorrections.has(index) ? 'accepted' : ''} data-change={`Avant : ${before}  →  Après : ${after}`} key={`${match.offset}-${index}`}>{after}</mark>);
                   cursor = match.offset + match.length;
                 });
@@ -2321,8 +2325,8 @@ function Editor({
                 return parts;
               })()}</div>
               <div className="correction-head"><div><small>PROPOSITIONS DE LA PLUME</small><b>{acceptedCorrections.size}/{correctionReview.length} validées</b></div><button type="button" onClick={() => setAcceptedCorrections(new Set(correctionReview.map((_, index) => index)))}><Check /> Tout valider</button></div>
-              <div className="correction-list">{correctionReview.map((match, index) => <button type="button" className={acceptedCorrections.has(index) ? 'accepted' : ''} onClick={() => setAcceptedCorrections((current) => { const next = new Set(current); next.has(index) ? next.delete(index) : next.add(index); return next; })} key={`${match.offset}-${index}`} title={match.message}><del>{d.text.slice(match.offset, match.offset + match.length)}</del><ChevronRight /><ins>{match.replacements[0].value}</ins><span>{acceptedCorrections.has(index) ? 'Validée' : 'Valider'}</span></button>)}</div>
-              <footer><button type="button" onClick={() => { setCorrectionReview([]); setAcceptedCorrections(new Set()); setCorrectionMessage('Corrections ignorées.'); }}>Ignorer</button><button type="button" className="apply-corrections" disabled={!acceptedCorrections.size} onClick={applyCorrections}><SpellCheck2 /> Appliquer {acceptedCorrections.size || ''}</button></footer>
+              <div className="correction-list">{correctionReview.map((match, index) => <article className={acceptedCorrections.has(index) ? 'correction-choice accepted' : 'correction-choice'} key={`${match.offset}-${index}`}><button type="button" className="correction-main" onClick={() => setAcceptedCorrections((current) => { const next = new Set(current); next.has(index) ? next.delete(index) : next.add(index); return next; })} title={match.message}><del>{d.text.slice(match.offset, match.offset + match.length)}</del><ChevronRight /><ins>{match.replacements[selectedReplacements[index] || 0].value}</ins><span>{acceptedCorrections.has(index) ? 'Validée' : 'Valider'}</span></button>{match.replacements.length > 1 && <div className="correction-alternatives"><small>Autres formes :</small>{match.replacements.slice(0, 4).map((replacement, replacementIndex) => <button type="button" className={(selectedReplacements[index] || 0) === replacementIndex ? 'selected' : ''} onClick={() => setSelectedReplacements((current) => ({ ...current, [index]: replacementIndex }))} key={`${index}-${replacementIndex}`}>{replacement.value}</button>)}</div>}</article>)}</div>
+              <footer><button type="button" onClick={() => { setCorrectionReview([]); setAcceptedCorrections(new Set()); setSelectedReplacements({}); setCorrectionMessage('Corrections ignorées.'); }}>Ignorer</button><button type="button" className="apply-corrections" disabled={!acceptedCorrections.size} onClick={applyCorrections}><SpellCheck2 /> Appliquer {acceptedCorrections.size || ''}</button></footer>
             </section>}
             {correctionMessage && <small className="correction-message">{correctionMessage}</small>}
             <small className="correction-privacy">Le texte est envoyé à <a href="https://languagetool.org" target="_blank" rel="noreferrer">LanguageTool</a> uniquement lorsque tu demandes une correction.</small>
