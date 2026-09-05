@@ -2123,3 +2123,57 @@ html.grimoire-ready body::before { display: none; }
 .add-detail { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; border: 1px dashed rgba(var(--house-rgb), .4); border-radius: 9px; background: rgba(var(--house-rgb), .07); color: #e7e1d5; font-weight: 800; }
 .add-detail svg { width: 16px; }
 @media(max-width:600px){.rich-toolbar{gap:2px}.rich-toolbar button{padding:0 6px}.detail-editor{padding:10px}.detail-heading{grid-template-columns:minmax(0,1fr) 29px 29px 29px}}
+
+/* Constellation libre de notes */
+.chalk-board {
+  min-height: 1050px;
+  border: 1px solid rgba(var(--house-rgb), .28);
+  border-radius: 20px;
+  background-color: #081a16;
+  background-image:
+    radial-gradient(circle at 14% 18%, rgba(var(--house-rgb), .1), transparent 24%),
+    radial-gradient(circle at 82% 71%, rgba(var(--house-rgb), .07), transparent 28%),
+    radial-gradient(circle, rgba(235, 221, 164, .16) 0 .7px, transparent 1.3px);
+  background-size: auto, auto, 57px 53px;
+  box-shadow: inset 0 0 120px #020b0990, 0 22px 55px #0005;
+}
+.chalk-sigil { opacity: .55; }
+.magic-note {
+  display: flex;
+  flex-direction: column;
+  min-width: 175px;
+  min-height: 150px;
+  max-width: 460px;
+  max-height: 520px;
+  box-sizing: border-box;
+  transition: box-shadow .18s ease;
+}
+.magic-note:has(.note-handle:active),.magic-note:has(.note-resize:active) {
+  z-index: 8;
+  box-shadow: 0 24px 48px #0009, 0 0 34px color-mix(in srgb,var(--note) 15%,transparent);
+}
+.magic-note > textarea {
+  flex: 1;
+  min-height: 55px;
+  height: auto;
+  padding-bottom: 12px;
+}
+.note-resize {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb,var(--note) 72%,#87978f);
+  font-size: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  opacity: .68;
+}
+.note-resize:hover { opacity: 1; }
+@media(max-width:700px){.chalk-board{min-height:900px}.magic-note{max-width:320px}}

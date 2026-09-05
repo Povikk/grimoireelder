@@ -91,6 +91,8 @@ type Note = {
   mastery?: 'À étudier' | 'En apprentissage' | 'Instable' | 'Maîtrisé';
   boardX?: number;
   boardY?: number;
+  boardWidth?: number;
+  boardHeight?: number;
   noteColor?: 'or' | 'violet' | 'bleu' | 'vert' | 'rose';
   tasks?: { id: string; text: string; done: boolean }[];
   details?: string[][];
@@ -2161,9 +2163,40 @@ function MagicBoard({ notes, update, remove, add }: {
     if (!board) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const rect = board.getBoundingClientRect();
+    const card = event.currentTarget.closest('.magic-note') as HTMLElement | null;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const initialLeft = card ? card.offsetLeft : ((note.boardX ?? 8) / 100) * rect.width;
+    const initialTop = card ? card.offsetTop : ((note.boardY ?? 10) / 100) * rect.height;
     const move = (moveEvent: PointerEvent) => {
-      update({ ...note, boardX: Math.max(0, Math.min(82, ((moveEvent.clientX - rect.left - 24) / rect.width) * 100)), boardY: Math.max(0, Math.min(78, ((moveEvent.clientY - rect.top - 22) / rect.height) * 100)) });
+      const width = card?.offsetWidth || note.boardWidth || 230;
+      const height = card?.offsetHeight || note.boardHeight || 190;
+      const left = Math.max(0, Math.min(rect.width - width, initialLeft + moveEvent.clientX - startX));
+      const top = Math.max(0, Math.min(rect.height - height, initialTop + moveEvent.clientY - startY));
+      update({ ...note, boardX: (left / rect.width) * 100, boardY: (top / rect.height) * 100 });
     };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
+  };
+  const startResize = (event: React.PointerEvent<HTMLButtonElement>, note: Note) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const card = event.currentTarget.closest('.magic-note') as HTMLElement | null;
+    if (!card) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const initialWidth = card.offsetWidth;
+    const initialHeight = card.offsetHeight;
+    const move = (moveEvent: PointerEvent) => update({
+      ...note,
+      boardWidth: Math.max(175, Math.min(460, initialWidth + moveEvent.clientX - startX)),
+      boardHeight: Math.max(150, Math.min(520, initialHeight + moveEvent.clientY - startY)),
+    });
     const stop = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', stop);
@@ -2176,10 +2209,11 @@ function MagicBoard({ notes, update, remove, add }: {
     <div className="chalk-board">
       <span className="chalk-sigil">✦　☾　✧</span>
       {!notes.length && <button className="board-empty" onClick={add}><StickyNote /><b>Le tableau attend tes premières pensées</b><small>Ajouter une note magique</small></button>}
-      {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}`} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%` }} key={note.id}>
+      {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}`} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%`, width: `${note.boardWidth || 230}px`, height: `${note.boardHeight || 190}px` }} key={note.id}>
         <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button aria-label="Changer la couleur" title="Changer la couleur" onClick={() => { const index = colors.indexOf(note.noteColor || 'or'); update({ ...note, noteColor: colors[(index + 1) % colors.length] }); }} /><button aria-label="Supprimer la note" title="Supprimer" onClick={() => confirm('Effacer cette note ?') && remove(note.id)}><X /></button></div>
         <input value={note.title} onChange={(event) => update({ ...note, title: event.target.value })} placeholder="Titre de la note" />
         <textarea value={note.text} onChange={(event) => update({ ...note, text: event.target.value })} placeholder="Écris quelque chose…" />
+        <button className="note-resize" type="button" aria-label="Redimensionner la note" title="Agrandir ou réduire" onPointerDown={(event) => startResize(event, note)}>↘</button>
       </article>)}
     </div>
   </section>;
