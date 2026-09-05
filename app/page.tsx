@@ -22,6 +22,8 @@ import {
   Plus,
   Search,
   ShieldAlert,
+  Send,
+  Check,
   Sparkles,
   Star,
   Trash2,
@@ -38,6 +40,11 @@ import {
   loadPrivateNotes,
   replacePrivateNotes,
   updateProfileName,
+  loadWikiSubmissions,
+  isWikiAdmin,
+  submitWikiProposal,
+  reviewWikiProposal,
+  type WikiSubmission,
 } from '@/lib/supabase';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
@@ -80,11 +87,11 @@ type Note = {
   details?: string[][];
 };
 type SearchDetail = {
-  source: 'Fiche' | 'Lore' | 'Règle';
+  source: 'Fiche' | 'Lore' | 'Règle' | 'Wiki';
   section: string;
   title: string;
   excerpt: string;
-  item: Note | (typeof lore)[number] | (typeof rules)[number];
+  item: Note | (typeof lore)[number] | (typeof rules)[number] | WikiSubmission;
 };
 const initial: Note[] = [
   {
@@ -249,7 +256,7 @@ export default function Home() {
     [edit, setEdit] = useState<Note | null>(null),
     [menu, setMenu] = useState(false),
     [searchSource, setSearchSource] = useState<
-      'Tout' | 'Fiche' | 'Lore' | 'Règle'
+      'Tout' | 'Fiche' | 'Lore' | 'Règle' | 'Wiki'
     >('Tout'),
     [searchTag, setSearchTag] = useState('Tous'),
     [theme, setTheme] = useState<HouseTheme>('falcon'),
@@ -263,7 +270,10 @@ export default function Home() {
     [cloudReady, setCloudReady] = useState(false),
     [syncState, setSyncState] = useState<'local' | 'syncing' | 'synced' | 'error'>('local'),
     [tourOpen, setTourOpen] = useState(false),
-    [tourStep, setTourStep] = useState(0);
+    [tourStep, setTourStep] = useState(0),
+    [wikiOpen, setWikiOpen] = useState(false),
+    [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
+    [wikiAdmin, setWikiAdmin] = useState(false);
   useEffect(() => {
     try {
       const s = localStorage.getItem('elderwood-grimoire');
@@ -366,6 +376,14 @@ export default function Home() {
       active = false;
     };
   }, [currentUser]);
+  useEffect(() => {
+    loadWikiSubmissions(currentUser).then(setWikiEntries).catch(() => setWikiEntries([]));
+    isWikiAdmin(currentUser).then(setWikiAdmin).catch(() => setWikiAdmin(false));
+  }, [currentUser]);
+  useEffect(() => {
+    if (wikiAdmin && new URLSearchParams(window.location.search).get('moderation') === '1')
+      setWikiOpen(true);
+  }, [wikiAdmin]);
   useEffect(() => {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -499,10 +517,19 @@ export default function Home() {
           `${item.section} ${item.number} ${item.text}`,
         ),
       })),
+      ...wikiEntries.filter((item) => item.status === 'approved').map((item) => ({
+        source: 'Wiki' as const,
+        section: `${item.category} · ${item.section}`,
+        title: item.title,
+        excerpt: item.content,
+        tags: [item.category],
+        item,
+        score: searchScore(q, item.title, `${item.category} ${item.section} ${item.subtitle} ${item.content}`),
+      })),
     ]
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-  }, [notes, q]);
+  }, [notes, q, wikiEntries]);
   const searchTags = useMemo(
     () =>
       [...new Set(globalResults.flatMap((result) => result.tags))].sort(
@@ -706,6 +733,11 @@ export default function Home() {
           <Castle />
           Elderwood<em>15</em>
         </button>
+        <button className="wiki-gate" onClick={() => currentUser ? setWikiOpen(true) : setAuthOpen(true)}>
+          <Send />
+          {wikiAdmin ? 'Modérer le wiki' : 'Proposer au wiki'}
+          <em>{wikiAdmin ? wikiEntries.filter((item) => item.status === 'pending').length : wikiEntries.filter((item) => item.created_by === currentUser?.id && item.status === 'pending').length}</em>
+        </button>
         <div className="local">
           {currentUser ? <LockKeyhole /> : <Sparkles />}
           <span>
@@ -825,7 +857,7 @@ export default function Home() {
               <div className="search-filters" aria-label="Filtres de recherche">
                 <div>
                   <b>Afficher</b>
-                  {(['Tout', 'Fiche', 'Lore', 'Règle'] as const).map(
+                  {(['Tout', 'Fiche', 'Lore', 'Règle', 'Wiki'] as const).map(
                     (source) => (
                       <button
                         className={searchSource === source ? 'active' : ''}
@@ -1323,7 +1355,7 @@ export default function Home() {
               <X />
             </button>
             <div className="search-detail-mark">
-              {searchOpen.source === 'Lore' ? <Compass /> : <ShieldAlert />}
+              {searchOpen.source === 'Lore' || searchOpen.source === 'Wiki' ? <Compass /> : <ShieldAlert />}
             </div>
             <small>
               {searchOpen.source} · {searchOpen.section}
@@ -1398,6 +1430,15 @@ export default function Home() {
           </div>
         </div>
       )}
+      {wikiOpen && currentUser && (
+        <WikiPanel
+          user={currentUser}
+          admin={wikiAdmin}
+          entries={wikiEntries}
+          close={() => setWikiOpen(false)}
+          refresh={async () => setWikiEntries(await loadWikiSubmissions(currentUser))}
+        />
+      )}
       {edit && (
         <Editor
           note={edit}
@@ -1415,6 +1456,55 @@ export default function Home() {
       )}
     </main>
   );
+}
+function WikiPanel({ user, admin, entries, close, refresh }: {
+  user: User;
+  admin: boolean;
+  entries: WikiSubmission[];
+  close: () => void;
+  refresh: () => Promise<void>;
+}) {
+  const [category, setCategory] = useState<WikiSubmission['category']>('Lore');
+  const [section, setSection] = useState('Communauté');
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [content, setContent] = useState('');
+  const [source, setSource] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const visible = admin ? entries : entries.filter((entry) => entry.created_by === user.id);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setBusy(true); setMessage('');
+    try {
+      const result = await submitWikiProposal(user, { category, section, title, subtitle, content, source });
+      setTitle(''); setSubtitle(''); setContent(''); setSource('');
+      setMessage(result.notificationSent ? 'Ta proposition attend désormais le sceau de l’admin.' : 'Proposition enregistrée. La notification e-mail devra être configurée.');
+      await refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible d’envoyer la proposition.'); }
+    finally { setBusy(false); }
+  };
+  const review = async (id: string, status: 'approved' | 'rejected') => {
+    setBusy(true);
+    try { await reviewWikiProposal(id, status); await refresh(); }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Modération impossible.'); }
+    finally { setBusy(false); }
+  };
+  return <div className="overlay wiki-overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}>
+    <section className="wiki-panel" role="dialog" aria-modal="true">
+      <button className="close" onClick={close}><X /></button>
+      <header><span><Sparkles /></span><div><small>SCRIPTORIUM COMMUNAUTAIRE</small><h2>{admin ? 'Salle de modération' : 'Proposer une page officielle'}</h2><p>Rien ne rejoint les archives communes avant ta validation.</p></div></header>
+      {!admin && <form onSubmit={submit}>
+        <div className="wiki-grid"><label>Catégorie<select value={category} onChange={(e) => setCategory(e.target.value as WikiSubmission['category'])}>{['Lore','Règle','Lieu','Créature','Personnalité'].map(v => <option key={v}>{v}</option>)}</select></label><label>Section<input value={section} onChange={(e) => setSection(e.target.value)} maxLength={60} required /></label></div>
+        <label>Titre<input value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={100} required /></label>
+        <label>Sous-titre (facultatif)<input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} maxLength={160} /></label>
+        <label>Contenu<textarea value={content} onChange={(e) => setContent(e.target.value)} minLength={20} maxLength={10000} required /></label>
+        <label>Source ou contexte (recommandé)<input value={source} onChange={(e) => setSource(e.target.value)} maxLength={300} placeholder="Scène RP, annonce staff, lien…" /></label>
+        <button className="wiki-submit" disabled={busy || title.length < 2 || content.length < 20}><Send /> Envoyer pour validation</button>
+      </form>}
+      {message && <p className="wiki-message">{message}</p>}
+      <div className="wiki-list"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{!visible.length && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
+    </section>
+  </div>;
 }
 function WelcomeTour({
   step,

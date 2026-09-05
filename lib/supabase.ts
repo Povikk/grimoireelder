@@ -7,6 +7,20 @@ type CloudNote = {
   [key: string]: unknown;
 };
 
+export type WikiSubmission = {
+  id: string;
+  created_by: string;
+  category: 'Lore' | 'Règle' | 'Lieu' | 'Créature' | 'Personnalité';
+  section: string;
+  title: string;
+  subtitle: string;
+  content: string;
+  source: string;
+  status: 'pending' | 'approved' | 'rejected';
+  moderator_note?: string | null;
+  created_at: string;
+};
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
@@ -90,5 +104,60 @@ export async function updateProfileName(user: User, displayName: string) {
   const client = getSupabase();
   if (!client) return;
   const { error } = await client.auth.updateUser({ data: { display_name: displayName } });
+  if (error) throw error;
+}
+
+export async function loadWikiSubmissions(user?: User | null) {
+  const client = getSupabase();
+  if (!client) return [] as WikiSubmission[];
+  const { data, error } = await client
+    .from('wiki_submissions')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as WikiSubmission[];
+}
+
+export async function isWikiAdmin(user?: User | null) {
+  const client = getSupabase();
+  if (!client || !user) return false;
+  const { data, error } = await client.rpc('is_wiki_admin');
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function submitWikiProposal(
+  user: User,
+  proposal: Pick<WikiSubmission, 'category' | 'section' | 'title' | 'subtitle' | 'content' | 'source'>,
+) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase n’est pas configuré.');
+  const { data, error } = await client
+    .from('wiki_submissions')
+    .insert({ ...proposal, created_by: user.id, status: 'pending' })
+    .select('*')
+    .single();
+  if (error) throw error;
+  const { error: notifyError } = await client.functions.invoke('notify-wiki-submission', {
+    body: { submissionId: data.id },
+  });
+  return { submission: data as WikiSubmission, notificationSent: !notifyError };
+}
+
+export async function reviewWikiProposal(
+  id: string,
+  status: 'approved' | 'rejected',
+  moderatorNote = '',
+) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase n’est pas configuré.');
+  const { error } = await client
+    .from('wiki_submissions')
+    .update({
+      status,
+      moderator_note: moderatorNote || null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id);
   if (error) throw error;
 }
