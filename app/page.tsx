@@ -359,11 +359,15 @@ export default function Home() {
         if (!active) return;
         if (remote.length) {
           const shouldRestoreCorvin = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com';
-          let restored = remote.map((note) =>
-            shouldRestoreCorvin && note.id === 'joueur' && ['Mon personnage', 'Nom à définir'].includes(note.title)
-              ? corvinCharacter
-              : note,
-          );
+          let restored = remote.map((note) => {
+            if (!shouldRestoreCorvin || note.id !== 'joueur' || note.title === 'Corvin Wrenfall')
+              return note;
+            return {
+              ...corvinCharacter,
+              image: note.image,
+              imagePath: note.imagePath,
+            };
+          });
           if (shouldRestoreCorvin && !restored.some((note) => note.id === 'joueur'))
             restored = [corvinCharacter, ...restored];
           if (restored.length !== remote.length || restored.some((note, index) => note !== remote[index]))
