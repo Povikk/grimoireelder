@@ -2177,6 +2177,7 @@ function MagicBoard({ notes, update, remove, add }: {
   const boardRef = useRef<HTMLDivElement>(null);
   const [boardSize, setBoardSize] = useState({ width: 1, height: 1 });
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [colorPickerId, setColorPickerId] = useState<string | null>(null);
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
@@ -2207,6 +2208,7 @@ function MagicBoard({ notes, update, remove, add }: {
     setLinkingId(null);
   };
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, note: Note) => {
+    if (linkingId) return;
     if ((event.target as HTMLElement).closest('button,input,textarea')) return;
     const board = event.currentTarget.closest('.chalk-board') as HTMLElement | null;
     const card = event.currentTarget.closest('.magic-note') as HTMLElement | null;
@@ -2257,7 +2259,7 @@ function MagicBoard({ notes, update, remove, add }: {
     <header><div><small>CARNET DE TRAVERSE</small><h1>Notes diverses</h1><p>Écris librement, puis déplace tes pensées sur le tableau.</p></div><button onClick={add}><Plus /> Ajouter une note</button></header>
     <div className={`chalk-board${linkingId ? ' is-linking' : ''}`} ref={boardRef}>
       <span className="chalk-sigil">✦　☾　✧</span>
-      {linkingId && <div className="linking-hint"><Link2 /><span><b>Première cellule choisie</b>Clique sur la chaîne d’une autre cellule pour les relier.</span><button onClick={() => setLinkingId(null)}>Annuler</button></div>}
+      {linkingId && <div className="linking-hint"><Link2 /><span><b>Première cellule choisie</b>Clique maintenant sur la cellule de destination.</span><button onClick={() => setLinkingId(null)}>Annuler</button></div>}
       <svg className="mind-links" width="100%" height="100%" aria-label="Connexions entre les notes">
         {links.map(({ source, target }) => {
           const from = centerOf(source), to = centerOf(target);
@@ -2267,8 +2269,9 @@ function MagicBoard({ notes, update, remove, add }: {
         })}
       </svg>
       {!notes.length && <button className="board-empty" onClick={add}><StickyNote /><b>Le tableau attend tes premières pensées</b><small>Ajouter une note magique</small></button>}
-      {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}`} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%`, width: `${note.boardWidth || 230}px`, height: `${note.boardHeight || 190}px` }} key={note.id}>
-        <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button aria-label="Changer la couleur" title="Changer la couleur" onClick={() => { const index = colors.indexOf(note.noteColor || 'or'); update({ ...note, noteColor: colors[(index + 1) % colors.length] }); }} /><button className={linkingId === note.id ? 'link-active' : ''} aria-label="Relier cette note" title={linkingId === note.id ? 'Annuler la liaison' : 'Relier à une autre note'} onClick={() => chooseConnection(note)}><Link2 /></button><button aria-label="Supprimer la note" title="Supprimer" onClick={() => confirm('Effacer cette note ?') && remove(note.id)}><X /></button></div>
+      {notes.map((note) => <article className={`magic-note note-${note.noteColor || 'or'}${linkingId && linkingId !== note.id ? ' link-target' : ''}`} onClick={(event) => { if (linkingId && linkingId !== note.id && !(event.target as HTMLElement).closest('button,input,textarea')) chooseConnection(note); }} style={{ left: `${note.boardX ?? 8}%`, top: `${note.boardY ?? 10}%`, width: `${note.boardWidth || 230}px`, height: `${note.boardHeight || 190}px` }} key={note.id}>
+        <div className="note-handle" onPointerDown={(event) => startDrag(event, note)}><span>✦</span><em>Glisser</em><button className="note-color-trigger" aria-label="Choisir la couleur" title="Choisir la couleur" onClick={(event) => { event.stopPropagation(); setColorPickerId((current) => current === note.id ? null : note.id); }} /><button className={linkingId === note.id ? 'link-active' : ''} aria-label="Relier cette note" title={linkingId === note.id ? 'Annuler la liaison' : 'Créer une liaison'} onClick={(event) => { event.stopPropagation(); chooseConnection(note); setColorPickerId(null); }}><Link2 /></button><button aria-label="Supprimer la note" title="Supprimer" onClick={(event) => { event.stopPropagation(); if (confirm('Effacer cette note ?')) remove(note.id); }}><X /></button></div>
+        {colorPickerId === note.id && <div className="note-color-picker" onClick={(event) => event.stopPropagation()}>{colors.map((color) => <button type="button" className={`color-${color}${note.noteColor === color || (!note.noteColor && color === 'or') ? ' selected' : ''}`} aria-label={`Couleur ${color}`} title={color} onClick={() => { update({ ...note, noteColor: color }); setColorPickerId(null); }} key={color} />)}</div>}
         <input value={note.title} onChange={(event) => update({ ...note, title: event.target.value })} placeholder="Titre de la note" />
         <textarea value={note.text} onChange={(event) => update({ ...note, text: event.target.value })} placeholder="Écris quelque chose…" />
         <button className="note-resize" type="button" aria-label="Redimensionner la note" title="Agrandir ou réduire" onPointerDown={(event) => startResize(event, note)}>↘</button>
