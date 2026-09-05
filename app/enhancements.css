@@ -2234,3 +2234,19 @@ html.grimoire-ready body::before { display: none; }
 .unsaved-card .save-changes { display: inline-flex; align-items: center; gap: 6px; border-color: rgba(var(--house-rgb), .45); background: color-mix(in srgb,var(--house) 30%,#123029); color: #fff; }
 .unsaved-card .save-changes svg { width: 15px; }
 @media(max-width:600px){.editor .edithead{top:-18px;margin:-18px -18px 17px;padding:18px}.unsaved-card{padding:23px 17px}.unsaved-card>div{display:grid}.unsaved-card button{width:100%}}
+
+/* Informations de fiche sans débordement horizontal */
+.fiche-overlay .sheet .body {
+  min-width: 0;
+  overflow-x: hidden;
+}
+.fiche-overlay .facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+.fiche-overlay .facts span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media(max-width:720px){.fiche-overlay .facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
