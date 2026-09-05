@@ -258,6 +258,7 @@ export default function Home() {
     [wikiSeed, setWikiSeed] = useState<Note | null>(null),
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
+  const [wikiDemoPending, setWikiDemoPending] = useState(true);
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
@@ -695,7 +696,7 @@ export default function Home() {
         <button className="wiki-gate" onClick={() => currentUser ? setWikiOpen(true) : setAuthOpen(true)}>
           <Send />
           {wikiAdmin ? 'Modérer le wiki' : 'Proposer au wiki'}
-          <em>{wikiAdmin ? wikiEntries.filter((item) => item.status === 'pending').length : wikiEntries.filter((item) => item.created_by === currentUser?.id && item.status === 'pending').length}</em>
+          <em>{wikiAdmin ? wikiEntries.filter((item) => item.status === 'pending').length + (wikiDemoPending ? 1 : 0) : wikiEntries.filter((item) => item.created_by === currentUser?.id && item.status === 'pending').length}</em>
         </button>
         <div className="local">
           {currentUser ? <LockKeyhole /> : <Sparkles />}
@@ -1375,6 +1376,8 @@ export default function Home() {
           admin={wikiAdmin}
           entries={wikiEntries}
           seed={wikiSeed}
+          demoPending={wikiDemoPending}
+          setDemoPending={setWikiDemoPending}
           close={() => { setWikiOpen(false); setWikiSeed(null); }}
           refresh={async () => setWikiEntries(await loadWikiSubmissions(currentUser))}
         />
@@ -1397,11 +1400,13 @@ export default function Home() {
     </main>
   );
 }
-function WikiPanel({ user, admin, entries, seed, close, refresh }: {
+function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, close, refresh }: {
   user: User;
   admin: boolean;
   entries: WikiSubmission[];
   seed: Note | null;
+  demoPending: boolean;
+  setDemoPending: (pending: boolean) => void;
   close: () => void;
   refresh: () => Promise<void>;
 }) {
@@ -1413,7 +1418,6 @@ function WikiPanel({ user, admin, entries, seed, close, refresh }: {
   const [content, setContent] = useState(seed ? [seed.text, ...(seed.details || []).map((detail) => `${detail[0]}\n${detail[1]}`)].filter(Boolean).join('\n\n') : '');
   const [source, setSource] = useState(seed?.source || '');
   const [publicConsent, setPublicConsent] = useState(false);
-  const [demoVisible, setDemoVisible] = useState(admin && !entries.some((entry) => entry.status === 'pending'));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const visible = admin ? entries : entries.filter((entry) => entry.created_by === user.id);
@@ -1449,7 +1453,7 @@ function WikiPanel({ user, admin, entries, seed, close, refresh }: {
         <button className="wiki-submit" disabled={busy || !publicConsent || title.length < 2 || content.length < 20}><Send /> Envoyer pour validation</button>
       </form>}
       {message && <p className="wiki-message">{message}</p>}
-      <div className="wiki-list"><div className="wiki-list-heading"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{admin && !demoVisible && <button onClick={() => { setDemoVisible(true); setMessage(''); }}><Sparkles /> Voir une demande d’exemple</button>}</div>{!visible.length && !demoVisible && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{admin && demoVisible && <article className="wiki-pending wiki-demo"><span className="demo-ribbon">SIMULATION</span><small>Lieu · Château d’Elderwood</small><h4>La Salle des Murmures</h4><em>Une ancienne salle d’étude oubliée sous la bibliothèque</em><p>Cette pièce circulaire possède une acoustique étrange : les conversations prononcées près des murs semblent réapparaître quelques minutes plus tard à l’autre bout de la salle. Des élèves l’utiliseraient pour étudier les manifestations résiduelles de l’Écho.</p><footer>Proposé par : autrejoueur@exemple.fr<br />Source déclarée : découverte lors d’une scène RP, à vérifier avec le lore officiel.</footer><span className="wiki-status">En attente</span><div><button onClick={() => { setDemoVisible(false); setMessage('Simulation : la fiche aurait été publiée et serait devenue visible par tous.'); }}><Check /> Publier</button><button onClick={() => { setDemoVisible(false); setMessage('Simulation : la proposition aurait été refusée sans modifier les archives.'); }}><X /> Refuser</button></div></article>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
+      <div className="wiki-list"><div className="wiki-list-heading"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{admin && !demoPending && <button onClick={() => { setDemoPending(true); setMessage(''); }}><Sparkles /> Voir une demande d’exemple</button>}</div>{!visible.length && !demoPending && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{admin && demoPending && <article className="wiki-pending wiki-demo"><span className="demo-ribbon">SIMULATION</span><small>Lieu · Château d’Elderwood</small><h4>La Salle des Murmures</h4><em>Une ancienne salle d’étude oubliée sous la bibliothèque</em><p>Cette pièce circulaire possède une acoustique étrange : les conversations prononcées près des murs semblent réapparaître quelques minutes plus tard à l’autre bout de la salle. Des élèves l’utiliseraient pour étudier les manifestations résiduelles de l’Écho.</p><footer>Proposé par : autrejoueur@exemple.fr<br />Source déclarée : découverte lors d’une scène RP, à vérifier avec le lore officiel.</footer><span className="wiki-status">En attente</span><div><button onClick={() => { setDemoPending(false); setMessage('Simulation : la fiche aurait été publiée et serait devenue visible par tous.'); }}><Check /> Publier</button><button onClick={() => { setDemoPending(false); setMessage('Simulation : la proposition aurait été refusée sans modifier les archives.'); }}><X /> Refuser</button></div></article>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
     </section>
   </div>;
 }
