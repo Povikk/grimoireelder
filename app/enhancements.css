@@ -1791,3 +1791,49 @@ html[data-theme] .tags span[role='button']:focus {
 .facts .house-fact.brumval::before { background: #56a96c; }
 .facts .house-fact.falcon::before { background: #d8893c; }
 .facts .house-fact.venatrix::before { background: #9862d4; }
+
+/* En-tête lisible sans troncature */
+.side > .brand {
+  min-height: 78px;
+  padding: 12px;
+  gap: 10px;
+  overflow: visible;
+  border-radius: 15px 15px 7px 15px;
+}
+.brand .brand-sigil {
+  width: 46px;
+  height: 46px;
+  flex-basis: 46px;
+  border-radius: 14px 5px 14px 5px;
+}
+.brand .brand-sigil svg { width: 22px; height: 22px; }
+.brand b {
+  overflow: visible;
+  color: #f2f0e9;
+  font-size: 20px;
+  line-height: 1.1;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.brand small {
+  max-width: 128px;
+  color: #afc0b8;
+  font-size: 8px;
+  line-height: 1.45;
+  letter-spacing: 1.1px;
+}
+.side > .account-gate {
+  min-height: 66px;
+  padding: 10px 11px;
+  grid-template-columns: 38px minmax(0, 1fr) 14px;
+  border-radius: 13px 13px 6px 13px;
+}
+.account-copy b {
+  overflow: visible;
+  line-height: 1.25;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.account-copy em { margin-top: 2px; }
