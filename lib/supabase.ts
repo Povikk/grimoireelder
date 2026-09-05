@@ -140,7 +140,13 @@ export async function loadAdminUsers() {
   const client = getSupabase();
   if (!client) return [] as AdminUser[];
   const { data, error } = await client.rpc('get_admin_users');
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      [error.message, error.details, error.hint, error.code && `Code : ${error.code}`]
+        .filter(Boolean)
+        .join(' · '),
+    );
+  }
   return (data || []) as AdminUser[];
 }
 
@@ -152,7 +158,13 @@ export async function loadAdminNotes(userId: string): Promise<CloudNote[]> {
     .select('id,payload,image_path')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      [error.message, error.details, error.hint, error.code && `Code : ${error.code}`]
+        .filter(Boolean)
+        .join(' · '),
+    );
+  }
   return Promise.all((data || []).map(async (row) => ({
     ...(row.payload as CloudNote),
     id: row.id,

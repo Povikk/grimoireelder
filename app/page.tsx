@@ -1586,9 +1586,13 @@ function AdminPanel({ close, openModeration }: { close: () => void; openModerati
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
-  useEffect(() => {
-    loadAdminUsers().then(setUsers).catch((reason) => setError(reason instanceof Error ? reason.message : 'Impossible de charger les utilisateurs.')).finally(() => setBusy(false));
-  }, []);
+  const refreshUsers = async () => {
+    setBusy(true); setError('');
+    try { setUsers(await loadAdminUsers()); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { refreshUsers(); }, []);
   const inspect = async (user: AdminUser) => {
     setSelected(user); setExpanded(null); setBusy(true); setError('');
     try { setUserNotes((await loadAdminNotes(user.user_id)) as Note[]); }
@@ -1602,7 +1606,7 @@ function AdminPanel({ close, openModeration }: { close: () => void; openModerati
     <section className="admin-panel" role="dialog" aria-modal="true" aria-label="Administration des grimoires">
       <header><div><small>SCEAU DE L’ADMINISTRATEUR</small><h2>Administration</h2><p>Inspecte les grimoires en lecture seule sans te connecter à la place des joueurs.</p></div><button className="close" onClick={close}><X /></button></header>
       <div className="admin-summary"><span><Users /><b>{users.length}</b><small>comptes</small></span><span><BookOpen /><b>{users.reduce((sum, user) => sum + Number(user.note_count), 0)}</b><small>fiches privées</small></span><button onClick={openModeration}><ShieldAlert /><b>Modérer le wiki</b><small>Ouvrir les propositions</small></button></div>
-      {error && <div className="admin-error"><ShieldAlert /><span><b>Configuration nécessaire</b>{error}<small>Exécute le fichier supabase/admin_migration.sql dans le SQL Editor de Supabase.</small></span></div>}
+      {error && <div className="admin-error"><ShieldAlert /><span><b>Supabase a refusé la requête</b>{error}<small>La migration semble présente : ce détail indique maintenant la cause exacte.</small><button onClick={refreshUsers}>Réessayer</button></span></div>}
       {!selected ? <>
         <label className="admin-search"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un joueur ou une adresse e-mail…" /></label>
         <div className="admin-users">{busy && <p>Ouverture du registre…</p>}{!busy && visible.map((user) => <button key={user.user_id} onClick={() => inspect(user)}><span className="admin-avatar">{(user.display_name || user.email || '?').slice(0, 1).toUpperCase()}</span><span><b>{user.display_name || 'Grimoire sans nom'}</b><small>{user.email}</small></span><span><b>{user.note_count}</b><small>fiches</small></span><span><b>{formatBytes(Number(user.storage_bytes))}</b><small>images</small></span><span><b>{formatDate(user.last_sign_in_at)}</b><small>dernière connexion</small></span><Eye /></button>)}</div>
