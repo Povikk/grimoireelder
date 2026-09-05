@@ -2056,6 +2056,9 @@ function Editor({
   const [imageDragging, setImageDragging] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [correctionMessage, setCorrectionMessage] = useState('');
+  type CorrectionMatch = { offset: number; length: number; message: string; replacements: { value: string }[] };
+  const [correctionReview, setCorrectionReview] = useState<CorrectionMatch[]>([]);
+  const [acceptedCorrections, setAcceptedCorrections] = useState<Set<number>>(new Set());
   const tagChoices = [
     'Élève',
     'Professeur',
@@ -2097,27 +2100,38 @@ function Editor({
         body,
       });
       if (!response.ok) throw new Error('Le correcteur est momentanément indisponible.');
-      const result = await response.json() as { matches?: { offset: number; length: number; message: string; replacements: { value: string }[] }[] };
-      const corrections = (result.matches || []).filter((match) => match.replacements?.[0]);
+      const result = await response.json() as { matches?: CorrectionMatch[] };
+      const corrections = (result.matches || [])
+        .filter((match) => match.replacements?.[0])
+        .sort((a, b) => a.offset - b.offset)
+        .filter((match, index, all) => index === 0 || match.offset >= all[index - 1].offset + all[index - 1].length);
       if (!corrections.length) {
         setCorrectionMessage('Aucune faute détectée.');
         return;
       }
-      if (!confirm(`${corrections.length} correction${corrections.length > 1 ? 's' : ''} proposée${corrections.length > 1 ? 's' : ''}. Les appliquer ?\n\nRelis ensuite les noms propres et les termes du lore.`)) {
-        setCorrectionMessage('Corrections annulées.');
-        return;
-      }
-      let corrected = d.text;
-      [...corrections].sort((a, b) => b.offset - a.offset).forEach((match) => {
-        corrected = corrected.slice(0, match.offset) + match.replacements[0].value + corrected.slice(match.offset + match.length);
-      });
-      setD((current) => ({ ...current, text: corrected }));
-      setCorrectionMessage(`${corrections.length} correction${corrections.length > 1 ? 's appliquées' : ' appliquée'}. Relis les noms propres.`);
+      setCorrectionReview(corrections);
+      setAcceptedCorrections(new Set());
+      setCorrectionMessage(`${corrections.length} proposition${corrections.length > 1 ? 's' : ''} à vérifier.`);
     } catch (error) {
       setCorrectionMessage(error instanceof Error ? error.message : 'Correction impossible.');
     } finally {
       setCorrecting(false);
     }
+  };
+  const applyCorrections = () => {
+    let corrected = d.text;
+    correctionReview
+      .map((match, index) => ({ match, index }))
+      .filter(({ index }) => acceptedCorrections.has(index))
+      .sort((a, b) => b.match.offset - a.match.offset)
+      .forEach(({ match }) => {
+        corrected = corrected.slice(0, match.offset) + match.replacements[0].value + corrected.slice(match.offset + match.length);
+      });
+    const count = acceptedCorrections.size;
+    setD((current) => ({ ...current, text: corrected }));
+    setCorrectionReview([]);
+    setAcceptedCorrections(new Set());
+    setCorrectionMessage(`${count} correction${count > 1 ? 's appliquées' : ' appliquée'}.`);
   };
   return (
     <div className="overlay center">
@@ -2275,8 +2289,24 @@ function Editor({
             <textarea
               rows={6}
               value={d.text}
-              onChange={(e) => setD({ ...d, text: e.target.value })}
+              onChange={(e) => { setD({ ...d, text: e.target.value }); setCorrectionReview([]); setAcceptedCorrections(new Set()); }}
             />
+            {!!correctionReview.length && <section className="correction-workshop">
+              <div className="correction-preview">{(() => {
+                const parts: React.ReactNode[] = [];
+                let cursor = 0;
+                correctionReview.forEach((match, index) => {
+                  parts.push(d.text.slice(cursor, match.offset));
+                  parts.push(<mark className={acceptedCorrections.has(index) ? 'accepted' : ''} key={`${match.offset}-${index}`}>{d.text.slice(match.offset, match.offset + match.length)}</mark>);
+                  cursor = match.offset + match.length;
+                });
+                parts.push(d.text.slice(cursor));
+                return parts;
+              })()}</div>
+              <div className="correction-head"><div><small>PROPOSITIONS DE LA PLUME</small><b>{acceptedCorrections.size}/{correctionReview.length} validées</b></div><button type="button" onClick={() => setAcceptedCorrections(new Set(correctionReview.map((_, index) => index)))}><Check /> Tout valider</button></div>
+              <div className="correction-list">{correctionReview.map((match, index) => <button type="button" className={acceptedCorrections.has(index) ? 'accepted' : ''} onClick={() => setAcceptedCorrections((current) => { const next = new Set(current); next.has(index) ? next.delete(index) : next.add(index); return next; })} key={`${match.offset}-${index}`} title={match.message}><del>{d.text.slice(match.offset, match.offset + match.length)}</del><ChevronRight /><ins>{match.replacements[0].value}</ins><span>{acceptedCorrections.has(index) ? 'Validée' : 'Valider'}</span></button>)}</div>
+              <footer><button type="button" onClick={() => { setCorrectionReview([]); setAcceptedCorrections(new Set()); setCorrectionMessage('Corrections ignorées.'); }}>Ignorer</button><button type="button" className="apply-corrections" disabled={!acceptedCorrections.size} onClick={applyCorrections}><SpellCheck2 /> Appliquer {acceptedCorrections.size || ''}</button></footer>
+            </section>}
             {correctionMessage && <small className="correction-message">{correctionMessage}</small>}
             <small className="correction-privacy">Le texte est envoyé à <a href="https://languagetool.org" target="_blank" rel="noreferrer">LanguageTool</a> uniquement lorsque tu demandes une correction.</small>
           </label>
