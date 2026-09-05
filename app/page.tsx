@@ -16,14 +16,13 @@ import {
   LogIn,
   MapPin,
   Menu,
-  Moon,
+  Palette,
   Pencil,
   Plus,
   Search,
   ShieldAlert,
   Sparkles,
   Star,
-  Sun,
   Trash2,
   Upload,
   Users,
@@ -33,6 +32,13 @@ import {
 import { rules, ruleSections } from './rules';
 import { lore, loreSections } from './lore';
 type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet';
+type HouseTheme = 'aerwyn' | 'brumval' | 'falcon' | 'venatrix';
+const houseThemes: { id: HouseTheme; name: string; motto: string }[] = [
+  { id: 'aerwyn', name: 'Aerwyn', motto: 'Honneur & protection' },
+  { id: 'brumval', name: 'Brumval', motto: 'Loyauté & courage' },
+  { id: 'falcon', name: 'Falcon', motto: 'Savoir & curiosité' },
+  { id: 'venatrix', name: 'Venatrix', motto: 'Maîtrise & influence' },
+];
 type Note = {
   id: string;
   kind: Kind;
@@ -229,7 +235,8 @@ export default function Home() {
       'Tout' | 'Fiche' | 'Lore' | 'Règle'
     >('Tout'),
     [searchTag, setSearchTag] = useState('Tous'),
-    [dark, setDark] = useState(true),
+    [theme, setTheme] = useState<HouseTheme>('falcon'),
+    [themeOpen, setThemeOpen] = useState(false),
     [greeting, setGreeting] = useState('Bienvenue'),
     [authOpen, setAuthOpen] = useState(false),
     [profileName, setProfileName] = useState(''),
@@ -252,13 +259,16 @@ export default function Home() {
             })),
           ),
         );
-      const savedTheme = localStorage.getItem('elderwood-dark');
+      const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
       const savedProfile = localStorage.getItem('elderwood-profile-name');
       if (savedProfile) setProfileName(savedProfile);
       if (!localStorage.getItem('elderwood-onboarding-done')) setTourOpen(true);
-      const night = savedTheme === null ? true : savedTheme === 'true';
-      setDark(night);
-      document.documentElement.classList.toggle('dark', night);
+      const activeTheme = houseThemes.some((item) => item.id === savedTheme)
+        ? savedTheme!
+        : 'falcon';
+      setTheme(activeTheme);
+      document.documentElement.classList.add('dark');
+      document.documentElement.dataset.theme = activeTheme;
       const hour = new Date().getHours();
       setGreeting(hour < 6 ? 'Douce nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir');
     } catch {}
@@ -319,13 +329,13 @@ export default function Home() {
       window.removeEventListener('keydown', closeOnEscape);
     };
   }, [open, edit, searchOpen, authOpen, tourOpen]);
-  const toggleDark = () =>
-    setDark((v) => {
-      const next = !v;
-      document.documentElement.classList.toggle('dark', next);
-      localStorage.setItem('elderwood-dark', String(next));
-      return next;
-    });
+  const chooseTheme = (next: HouseTheme) => {
+    setTheme(next);
+    setThemeOpen(false);
+    document.documentElement.classList.add('dark');
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('elderwood-house-theme', next);
+  };
   const shown = useMemo(
     () =>
       notes.filter(
@@ -616,13 +626,44 @@ export default function Home() {
               </button>
             )}
           </label>
-          <button
-            className="theme-toggle"
-            onClick={toggleDark}
-            aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
-          >
-            {dark ? <Sun /> : <Moon />}
-          </button>
+          <div className="theme-control">
+            <button
+              className={`theme-toggle theme-${theme}`}
+              onClick={() => setThemeOpen((value) => !value)}
+              aria-label="Choisir l’ambiance d’une maison"
+              aria-expanded={themeOpen}
+              title={`Thème ${houseThemes.find((item) => item.id === theme)?.name}`}
+            >
+              <Palette />
+              <i />
+            </button>
+            {themeOpen && (
+              <>
+                <button
+                  className="theme-backdrop"
+                  onClick={() => setThemeOpen(false)}
+                  aria-label="Fermer les thèmes"
+                />
+                <div className="theme-menu" role="dialog" aria-label="Thèmes des maisons">
+                  <small>AMBIANCE DU GRIMOIRE</small>
+                  <strong>Choisis ta maison</strong>
+                  <div>
+                    {houseThemes.map((item) => (
+                      <button
+                        className={`${item.id}${theme === item.id ? ' active' : ''}`}
+                        onClick={() => chooseTheme(item.id)}
+                        key={item.id}
+                      >
+                        <i />
+                        <span><b>{item.name}</b><small>{item.motto}</small></span>
+                        {theme === item.id && <Sparkles />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button
             className="help-toggle"
             onClick={() => {

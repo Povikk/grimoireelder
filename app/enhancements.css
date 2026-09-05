@@ -1540,3 +1540,190 @@
   .tour-skip { top: 17px; right: 20px; }
   .tour-page h2 { font-size: 31px; }
 }
+
+/* Ambiances nocturnes des quatre maisons */
+html[data-theme='aerwyn'] {
+  --house: #5799eb;
+  --house-rgb: 87, 153, 235;
+  --house-deep: #0c2334;
+  --house-surface: #152631;
+  --gold: #73aaf0;
+  --forest: #102b39;
+}
+html[data-theme='brumval'] {
+  --house: #56a96c;
+  --house-rgb: 86, 169, 108;
+  --house-deep: #102a20;
+  --house-surface: #182a20;
+  --gold: #67b67a;
+  --forest: #153022;
+}
+html[data-theme='falcon'] {
+  --house: #d8893c;
+  --house-rgb: 216, 137, 60;
+  --house-deep: #302013;
+  --house-surface: #2b2119;
+  --gold: #db994d;
+  --forest: #302318;
+}
+html[data-theme='venatrix'] {
+  --house: #9862d4;
+  --house-rgb: 152, 98, 212;
+  --house-deep: #241633;
+  --house-surface: #261d30;
+  --gold: #aa79df;
+  --forest: #281b34;
+}
+html[data-theme] body {
+  background-color: #0e1514;
+  background-image:
+    radial-gradient(circle at 86% 9%, rgba(var(--house-rgb), .075), transparent 28%),
+    radial-gradient(rgba(var(--house-rgb), .1) .7px, transparent .7px);
+}
+html[data-theme] .work > header {
+  background: rgba(13, 21, 19, .92);
+  border-color: rgba(var(--house-rgb), .2);
+}
+html[data-theme] .side {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--house-deep) 82%, transparent), rgba(5, 17, 14, .93)),
+    linear-gradient(90deg, transparent, rgba(4, 15, 12, .52) 72%, rgba(4, 15, 12, .92)),
+    url('/sidebar-arcana.webp');
+  border-right-color: rgba(var(--house-rgb), .24);
+  box-shadow: inset -18px 0 32px #00110ec9, 12px 0 45px rgba(var(--house-rgb), .08);
+}
+html[data-theme] .brand {
+  border-color: rgba(var(--house-rgb), .35);
+  background:
+    radial-gradient(circle at 18% 15%, rgba(var(--house-rgb), .22), transparent 36%),
+    linear-gradient(135deg, color-mix(in srgb, var(--house-deep) 88%, #183a32), #0b1d19 76%);
+}
+html[data-theme] .brand .brand-sigil,
+html[data-theme] .account-avatar {
+  border-color: color-mix(in srgb, var(--house) 70%, white);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--house) 72%, white), color-mix(in srgb, var(--house) 78%, #38230e));
+  box-shadow: 0 0 0 5px rgba(var(--house-rgb), .05), 0 0 24px rgba(var(--house-rgb), .24);
+}
+html[data-theme] .brand::before,
+html[data-theme] .brand .brand-sigil span,
+html[data-theme] .account-copy small,
+html[data-theme] .heading small,
+html[data-theme] .body > small,
+html[data-theme] .edithead small,
+html[data-theme] .entry-type,
+html[data-theme] .list article small,
+html[data-theme] .first-actions small,
+html[data-theme] .cursor-magic {
+  color: var(--house);
+}
+html[data-theme] .primary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--house) 42%, #153a31), color-mix(in srgb, var(--house-deep) 78%, #123b32));
+  box-shadow: 0 8px 24px rgba(var(--house-rgb), .14);
+}
+html[data-theme] .theme-toggle,
+html[data-theme] .help-toggle {
+  border-color: rgba(var(--house-rgb), .35);
+  color: var(--house);
+  background: color-mix(in srgb, var(--house-surface) 78%, #101b18);
+}
+html[data-theme] .cards > button,
+html[data-theme] .list,
+html[data-theme] .rule-list article,
+html[data-theme] .rules-summary,
+html[data-theme] .lore-grid > article,
+html[data-theme] .house-strip article,
+html[data-theme] .first-actions > button {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--house-surface) 42%, #172220), #131d1a 76%);
+  border-color: rgba(var(--house-rgb), .2);
+}
+html[data-theme] .cards > button:hover,
+html[data-theme] .first-actions > button:hover {
+  border-color: rgba(var(--house-rgb), .55);
+  box-shadow: 0 14px 32px rgba(var(--house-rgb), .1);
+}
+html[data-theme] .first-actions > button > svg:first-child,
+html[data-theme] .tour-choices button > svg:first-child {
+  color: var(--house);
+  background: rgba(var(--house-rgb), .1);
+}
+html[data-theme] .hero::before,
+html[data-theme] .hero .seal { color: var(--house); border-color: rgba(var(--house-rgb), .42); }
+html[data-theme] .hero::after {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--house-deep) 62%, #061411) 0%, rgba(7, 22, 18, .78) 48%, rgba(5, 15, 13, .1) 82%),
+    linear-gradient(0deg, rgba(6, 17, 14, .52), transparent 55%);
+}
+html[data-theme] .tags span[role='button']:hover,
+html[data-theme] .tags span[role='button']:focus {
+  background: color-mix(in srgb, var(--house) 34%, #20322c);
+}
+.theme-control { position: relative; flex: 0 0 auto; }
+.theme-toggle { position: relative; }
+.theme-toggle > i {
+  position: absolute;
+  right: 1px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #101817;
+  border-radius: 50%;
+  background: var(--house);
+  box-shadow: 0 0 8px rgba(var(--house-rgb), .75);
+}
+.theme-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.theme-menu {
+  position: absolute;
+  z-index: 30;
+  top: 52px;
+  right: 0;
+  width: 320px;
+  padding: 18px;
+  border: 1px solid rgba(var(--house-rgb), .42);
+  border-radius: 18px 7px 18px 7px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(var(--house-rgb), .18), transparent 38%),
+    rgba(10, 25, 21, .985);
+  box-shadow: 0 24px 65px #000a, inset 0 1px #fff1;
+  animation: grimoire-open .2s ease-out;
+}
+.theme-menu > small { display: block; color: var(--house); font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
+.theme-menu > strong { display: block; margin: 4px 0 14px; color: #f0eee8; font: 600 21px Georgia, serif; }
+.theme-menu > div { display: grid; gap: 7px; }
+.theme-menu > div > button {
+  min-height: 58px;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  gap: 11px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid #344841;
+  border-radius: 11px;
+  background: #14221e;
+  color: #dce5e0;
+}
+.theme-menu > div > button:hover,
+.theme-menu > div > button.active { transform: translateX(2px); }
+.theme-menu > div > button > i { width: 34px; height: 34px; border-radius: 50%; box-shadow: inset 0 0 0 5px #08120f4d, 0 0 15px currentColor; }
+.theme-menu button.aerwyn > i { background: #5799eb; color: #5799eb; }
+.theme-menu button.brumval > i { background: #56a96c; color: #56a96c; }
+.theme-menu button.falcon > i { background: #d8893c; color: #d8893c; }
+.theme-menu button.venatrix > i { background: #9862d4; color: #9862d4; }
+.theme-menu button.aerwyn:hover, .theme-menu button.aerwyn.active { border-color: #5799eb99; background: #142838; }
+.theme-menu button.brumval:hover, .theme-menu button.brumval.active { border-color: #56a96c99; background: #172b20; }
+.theme-menu button.falcon:hover, .theme-menu button.falcon.active { border-color: #d8893c99; background: #2c2118; }
+.theme-menu button.venatrix:hover, .theme-menu button.venatrix.active { border-color: #9862d499; background: #281d31; }
+.theme-menu button span { min-width: 0; display: flex; flex-direction: column; }
+.theme-menu button b { font: 600 15px Georgia, serif; color: #f1eee6; }
+.theme-menu button small { margin-top: 2px; color: #91a39a; font-size: 10px; }
+.theme-menu button > svg { width: 16px; color: currentColor; }
+@media (max-width: 620px) {
+  .theme-menu { position: fixed; top: 68px; right: 12px; left: 12px; width: auto; }
+}
