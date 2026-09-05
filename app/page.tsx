@@ -265,6 +265,7 @@ export default function Home() {
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
   const [wikiDemoPending, setWikiDemoPending] = useState(true);
+  const [visibleNoteLimit, setVisibleNoteLimit] = useState(10);
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
@@ -423,6 +424,7 @@ export default function Home() {
       setSearchTag('Tous');
     }
   }, [q]);
+  useEffect(() => setVisibleNoteLimit(10), [section, q]);
   useEffect(() => {
     if (!open && !edit && !searchOpen && !authOpen && !tourOpen && !wikiOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -786,7 +788,7 @@ export default function Home() {
           )}
           </div>
         </header>
-        <div className="content">
+        <div className={`content${section === 'Toutes' && !q ? ' home-overview' : ''}`}>
           {q.trim() ? (
             <section className="global-search">
               <div className="search-heading">
@@ -1088,7 +1090,7 @@ export default function Home() {
                 </span>
               </div>
               <section className="list">
-                {shown.map((n) => {
+                {shown.slice(0, visibleNoteLimit).map((n) => {
                   const I = icons[n.kind];
                   return (
                     <article onClick={() => setOpen(n)} key={n.id}>
@@ -1111,6 +1113,13 @@ export default function Home() {
                     <h3>Rien dans ces pages</h3>
                     <p>Essaie un autre mot, ou crée une nouvelle fiche.</p>
                   </div>
+                )}
+                {shown.length > visibleNoteLimit && (
+                  <button className="older-notes" onClick={() => setVisibleNoteLimit((limit) => limit + 10)}>
+                    <BookOpen />
+                    <span><b>Voir les notes précédemment ajoutées</b><small>{shown.length - visibleNoteLimit} fiche{shown.length - visibleNoteLimit > 1 ? 's' : ''} restante{shown.length - visibleNoteLimit > 1 ? 's' : ''}</small></span>
+                    <ChevronRight />
+                  </button>
                 )}
               </section>
             </>
