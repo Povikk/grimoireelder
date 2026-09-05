@@ -1537,6 +1537,7 @@ function AuthPanel({
   const [draft, setDraft] = useState(name);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -1567,10 +1568,14 @@ function AuthPanel({
     setBusy(true);
     setMessage('');
     try {
+      if (password !== confirmPassword) {
+        throw new Error('Les deux mots de passe ne correspondent pas.');
+      }
       const { error } = await client.auth.updateUser({ password });
       if (error) throw error;
       setMessage('Ton nouveau sceau est posé. Le grimoire est de nouveau accessible.');
       setPassword('');
+      setConfirmPassword('');
       window.setTimeout(cancel, 1100);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Modification impossible.');
@@ -1584,6 +1589,9 @@ function AuthPanel({
     setBusy(true);
     setMessage('');
     try {
+      if (mode === 'signup' && password !== confirmPassword) {
+        throw new Error('Les deux mots de passe ne correspondent pas.');
+      }
       if (mode === 'login') {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -1639,8 +1647,14 @@ function AuthPanel({
               <LockKeyhole />
               <input id="grimoire-new-password" type="password" autoFocus value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
             </div>
+            <label htmlFor="grimoire-new-password-confirm">Confirmer le nouveau mot de passe</label>
+            <div className="auth-input">
+              <LockKeyhole />
+              <input id="grimoire-new-password-confirm" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} required />
+            </div>
+            {confirmPassword && password !== confirmPassword && <p className="auth-password-error">Les deux mots de passe ne correspondent pas.</p>}
             {message && <p className="auth-message">{message}</p>}
-            <button className="auth-submit" disabled={busy || password.length < 8}>
+            <button className="auth-submit" disabled={busy || password.length < 8 || password !== confirmPassword}>
               {busy ? 'Nouveau sceau…' : 'Choisir ce nouveau mot de passe'} <ChevronRight />
             </button>
           </form>
@@ -1676,8 +1690,15 @@ function AuthPanel({
               <div className="auth-input"><LogIn /><input id="grimoire-email" type="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} placeholder="sorcier@exemple.fr" required /></div>
               <label htmlFor="grimoire-password">Mot de passe</label>
               <div className="auth-input"><LockKeyhole /><input id="grimoire-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>
+              {mode === 'signup' && (
+                <>
+                  <label htmlFor="grimoire-password-confirm">Confirmer le mot de passe</label>
+                  <div className="auth-input"><LockKeyhole /><input id="grimoire-password-confirm" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} required /></div>
+                  {confirmPassword && password !== confirmPassword && <p className="auth-password-error">Les deux mots de passe ne correspondent pas.</p>}
+                </>
+              )}
               {message && <p className="auth-message">{message}</p>}
-              <button className="auth-submit" disabled={busy || !email || password.length < 8}>
+              <button className="auth-submit" disabled={busy || !email || password.length < 8 || (mode === 'signup' && password !== confirmPassword)}>
                 {busy ? 'Ouverture…' : mode === 'login' ? 'Entrer dans mon grimoire' : 'Créer mon grimoire'} <ChevronRight />
               </button>
             </form>
