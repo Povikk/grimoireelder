@@ -2756,6 +2756,23 @@ html[data-theme] .side,
   background: linear-gradient(145deg, #10241e, #081713 68%);
   color: #dce6df;
   box-shadow: 0 30px 100px #000c, 0 0 44px rgba(var(--house-rgb), .1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--house-rgb), .52) rgba(4, 16, 13, .42);
+}
+.lore-reader::-webkit-scrollbar { width: 8px; }
+.lore-reader::-webkit-scrollbar-track {
+  margin-block: 14px;
+  border-radius: 999px;
+  background: rgba(4, 16, 13, .42);
+}
+.lore-reader::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(var(--house), rgba(var(--house-rgb), .38)) padding-box;
+}
+.lore-reader::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(color-mix(in srgb, var(--house) 78%, white), var(--house)) padding-box;
+  box-shadow: 0 0 8px rgba(var(--house-rgb), .28);
 }
 .lore-reader > .close {
   position: sticky;
