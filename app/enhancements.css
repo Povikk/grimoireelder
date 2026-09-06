@@ -2700,6 +2700,110 @@ html[data-theme] .side,
 @media (max-width: 600px) {
   .detail-heading { grid-template-columns: 29px minmax(0, 1fr) 27px 27px 27px; }
 }
+
+/* Lecture complète des articles du lore. */
+.lore-entry-card {
+  cursor: pointer;
+}
+.lore-entry-card:focus-visible {
+  outline: 2px solid var(--house);
+  outline-offset: 3px;
+}
+.lore-grid .lore-entry-card > p,
+.house-strip .lore-entry-card > p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+.lore-readmore {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 13px;
+  color: var(--entry-accent, var(--house));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.lore-readmore svg { width: 13px; }
+.lore-reader-overlay {
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+.lore-reader {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: min(820px, 90vh);
+  overflow: auto;
+  padding: 35px 40px 27px;
+  border: 1px solid rgba(var(--house-rgb), .34);
+  border-radius: 22px 7px 22px 7px;
+  background: linear-gradient(145deg, #10241e, #081713 68%);
+  color: #dce6df;
+  box-shadow: 0 30px 100px #000c, 0 0 44px rgba(var(--house-rgb), .1);
+}
+.lore-reader > .close {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  float: right;
+  margin: -17px -20px 0 15px;
+}
+.lore-reader header {
+  padding: 0 42px 23px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--entry-accent) 32%, transparent);
+}
+.lore-reader header small {
+  color: var(--entry-accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.lore-reader header time {
+  margin-left: 10px;
+  color: #98aaa1;
+  font-size: 11px;
+}
+.lore-reader h2 {
+  margin: 9px 0 3px;
+  color: #f3eddf;
+  font: 700 clamp(31px, 5vw, 45px)/1 "Cormorant Garamond", Georgia, serif;
+}
+.lore-reader h3 {
+  margin: 8px 0 0;
+  color: var(--entry-accent);
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.lore-reader-text { padding: 20px 0 8px; }
+.lore-reader-text p {
+  margin: 0 0 15px;
+  color: #c3d0c9;
+  font: 16px/1.72 system-ui, sans-serif;
+  white-space: pre-line;
+}
+.lore-reader footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 17px;
+  border-top: 1px solid #ffffff12;
+  color: #758b80;
+  font-size: 10px;
+}
+.lore-reader footer svg { width: 14px; color: var(--house); }
+@media (max-width: 600px) {
+  .lore-reader-overlay { padding: 10px; }
+  .lore-reader { padding: 27px 21px 22px; border-radius: 17px 5px 17px 5px; }
+  .lore-reader > .close { margin-right: -7px; }
+  .lore-reader-text p { font-size: 14px; }
+}
 .list > .empty {
   display: grid;
   min-height: 160px;

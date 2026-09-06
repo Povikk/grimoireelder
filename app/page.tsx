@@ -2037,6 +2037,7 @@ function RulesView({ query }: { query: string }) {
 }
 function LoreView({ query }: { query: string }) {
   const [tab, setTab] = useState('Tout');
+  const [selectedLore, setSelectedLore] = useState<(typeof lore)[number] | null>(null);
   const visible = lore.filter(
     (x) =>
       (tab === 'Tout' || x.section === tab) &&
@@ -2078,6 +2079,11 @@ function LoreView({ query }: { query: string }) {
             .filter((x) => x.section === 'Maisons')
             .map((h) => (
               <article
+                className="lore-entry-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedLore(h)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedLore(h); } }}
                 style={{ '--house': h.accent } as React.CSSProperties}
                 key={h.title}
               >
@@ -2085,6 +2091,7 @@ function LoreView({ query }: { query: string }) {
                 <small>{h.subtitle}</small>
                 <h2>{h.title}</h2>
                 <p>{h.text}</p>
+                <span className="lore-readmore">Lire l’article complet <ChevronRight /></span>
               </article>
             ))}
         </section>
@@ -2096,7 +2103,7 @@ function LoreView({ query }: { query: string }) {
         className={tab === 'Chronologie' ? 'lore-grid timeline' : 'lore-grid'}
       >
         {visible.map((x) => (
-          <article style={{ '--entry-accent': loreAccent(x.section) } as React.CSSProperties} key={x.section + x.title}>
+          <article className="lore-entry-card" role="button" tabIndex={0} onClick={() => setSelectedLore(x)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedLore(x); } }} style={{ '--entry-accent': loreAccent(x.section) } as React.CSSProperties} key={x.section + x.title}>
             <div className="lore-meta">
               <span>{x.section}</span>
               {x.year && <b>{x.year}</b>}
@@ -2104,9 +2111,11 @@ function LoreView({ query }: { query: string }) {
             <h2>{x.title}</h2>
             {x.subtitle && <h3>{x.subtitle}</h3>}
             <p>{x.text}</p>
+            <span className="lore-readmore">Lire l’article complet <ChevronRight /></span>
           </article>
         ))}
       </div>
+      {selectedLore && <div className="overlay lore-reader-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedLore(null)}><article className="lore-reader" role="dialog" aria-modal="true" aria-label={selectedLore.title}><button className="close" onClick={() => setSelectedLore(null)} aria-label="Fermer"><X /></button><header style={{ '--entry-accent': loreAccent(selectedLore.section) } as React.CSSProperties}><small>{selectedLore.section}</small>{selectedLore.year && <time>{selectedLore.year}</time>}<h2>{selectedLore.title}</h2>{selectedLore.subtitle && <h3>{selectedLore.subtitle}</h3>}</header><div className="lore-reader-text">{selectedLore.text.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div><footer><BookOpen /> Article complet des archives d’Elderwood</footer></article></div>}
     </section>
   );
 }
