@@ -39,8 +39,19 @@ const general=[
 ['Use Bug','Toute exploitation volontaire d’un dysfonctionnement est interdite. Signaler les bugs au staff.']
 ];
 const roleplay=[
-['Fear RP','Le danger doit être pris au sérieux : peur, hésitation, fuite ou obéissance doivent être jouées selon la situation.'],
-['Nom de famille','Un nom appartenant à une famille notoire du lore ne peut être obtenu que par une naissance.'],
+['Fear RP','Le danger doit être pris au sérieux : professeur, directeur, créature ou menace. Vous devez jouer la peur, l’hésitation, la fuite ou l’obéissance. Un refus total de Fear RP peut entraîner de véritables conséquences RP.'],
+['Nom de famille','Pour porter le nom d’une famille originelle, notable ou réputée du lore d’Elderwood, il faut attendre une naissance validée par le staff.'],
+['/me, /it et /na',`Les narrations du tchat servent l’immersion.
+
+Le /me décrit une action physique de votre personnage : porter une tasse à ses lèvres, sourire, tendre la main ou froncer les sourcils.
+
+Le /it décrit l’environnement ou une impression visible, jamais directement une pensée : une tension ressentie dans la forêt, une salle devenue anormalement froide ou la pluie mêlée aux larmes d’un personnage.
+
+Le /na est une narration globale envoyée à tout le serveur. Elle ne doit pas être spammée et doit relater un changement important réellement provoqué en RP.
+
+Les pensées ne doivent jamais être dévoilées par /me, /it ou /na. Il est seulement possible de suggérer un état visible, par exemple qu’un personnage semble pensif.
+
+En cas de RPK, l’auteur décrit l’action en /me ou /it selon sa nature. Un /na est possible mais facultatif. Le joueur décédé peut écrire un texte de fin en /na sans révéler comment ni par qui il est mort.`],
 ['Vol / Arnaque','Une arnaque RP peut atteindre au maximum 2 500 Dragondors.'],
 ['Potions','Les effets affichés des potions doivent être réellement joués, y compris l’amnésie.'],
 ['Coma','Ne pas mettre quelqu’un dans le coma uniquement pour lui faire perdre la mémoire. Il exige une cause grave et cohérente.'],
@@ -59,9 +70,44 @@ const roleplay=[
 ];
 function make(section:string,items:string[][],critical:string[]=[]):Rule[]{return items.map((x,i)=>({section,number:i+1,title:x[0],text:x[1],critical:critical.includes(x[0])}))}
 export const rules:Rule[]=[...make('Lexique RP',lex,['Cheat / Use bug','ERP à caractère sexuel']),...make('Général',general,['Nom Roleplay','Use Bug']),...make('RolePlay',roleplay,['RP Mage noir','Changement de maison']),
-{section:'RPK On',number:1,title:'Forêt interdite / Cathédrale / Grotte',text:'Zones sous risque RPK. Une rencontre ne justifie pas un meurtre : privilégier le RP. Entrée à vos risques et périls.',critical:true},
-{section:'RPK On',number:2,title:'Bureau du directeur',text:'Sans invitation, l’entrée expose à un RPK possible sans porte de sortie.',critical:true},
-{section:'Famille',number:1,title:'Effectif des familles',text:'Familles notoires : 7 élèves et 3 autres. Familles sur dossier : 4 élèves et 1 autre.'},
+...make('RPK On',[
+['Interdiction d’attirer quelqu’un dans une zone RPK pour le tuer (Force RP)',`Vous ne pouvez pas amener quelqu’un contre son gré dans une zone RPK afin qu’il y soit tué sans ticket RPK actif.
+
+Vous devez posséder un ticket RPK pour tuer quelqu’un, ou avoir son accord HRP. En cas d’accord HRP, la personne tuée doit le signaler au staff par ticket afin que son consentement soit vérifié.
+
+Une autorisation ou un ticket RPK ne supprime jamais les conséquences RP du meurtre.`],
+['Forêt de Brûlebrume','Zone à risque RPK : entrez à vos risques et périls. Selon les situations rencontrées, vous pouvez y trouver la mort.'],
+['Cathédrale abandonnée et cimetière','Zone à risque RPK : entrez à vos risques et périls. Vous pouvez y trouver la mort selon la situation, mais personne ne peut vous y tuer sans ticket RPK.'],
+['Grottes','Zone à risque RPK : entrez à vos risques et périls. Vous pouvez y trouver la mort selon la situation, mais personne ne peut vous y tuer sans ticket RPK.'],
+['Île de la Tour',`Zone à très haut risque RPK. Au large d’Elderwood se trouve une île portant une grande tour en ruines et un phare abandonné.
+
+Vous y aventurer sans invitation vous soumet au RPK de ses occupants, qui seront libres de vous tuer ou non, sans porte de sortie.`],
+['Bureau du Directeur d’Elderwood','N’entrez jamais sans invitation. Toute intrusion vous expose à un RPK sans porte de sortie.'],
+['Siège de l’AMRU',`Ne vagabondez jamais dans le siège de l’Autorité Magique du Royaume-Uni sans autorisation. En dehors du hall central public, entrer dans une zone non accessible à tous sans invitation vous soumet au RPK sans porte de sortie.`],
+['Prison de Brise-Flux',`Entrer dans la prison sans laisser-passer de l’AMRU ou autorisation spécifique vous soumet au RPK sans porte de sortie.
+
+La zone autour de la prison est également soumise au RPK. Tant que vous n’êtes pas entré, une porte de sortie vous sera offerte. En cas de récidive dans cette zone, aucune porte de sortie ne sera accordée.`]
+],['Interdiction d’attirer quelqu’un dans une zone RPK pour le tuer (Force RP)','Forêt de Brûlebrume','Cathédrale abandonnée et cimetière','Grottes','Île de la Tour','Bureau du Directeur d’Elderwood','Siège de l’AMRU','Prison de Brise-Flux']),
+...make('Familles',[
+['Les familles et leur hiérarchie',`Les familles originelles, notables et réputées sont connues au Royaume-Uni comme des familles de sang pur possédant un titre de noblesse magique.
+
+Familles originelles : Dravenholt, Caerwyn, Hearthbane et Valemont.
+Familles notables : Belladorn et Ravenscroft.
+Familles réputées : elles seront ajoutées après l’ouverture du serveur selon la validation des dossiers joueurs.
+
+Une famille non officielle peut aussi être de sang pur, sans bénéficier de la même notoriété. Est considéré comme sang pur le descendant d’au moins cinq générations de Résonants de sang pur.`],
+['Effectif des familles',`Familles originelles : 6 places joueurs et 2 places streamers.
+Familles notables : 6 places joueurs et 1 place streamer.
+Familles réputées : 6 places joueurs.
+
+Une famille non officielle sans dossier peut compter au maximum 5 membres portant le même nom. Les branches ou liens de cousinage utilisant des noms différents ne sont pas acceptés.`],
+['Poser un dossier Famille',`Une famille non officielle composée de plus de 3 joueurs doit être signalée au staff par ticket avec la liste de ses joueurs et personnages.
+
+Si elle est enregistrée, active et influente sur le plateau, elle pourra proposer un dossier pour devenir une famille officielle réputée. Le staff évaluera son potentiel et décidera de sa validation.`],
+['Évoluer avec sa famille',`Selon le RP, l’impact et les actions réalisées, une famille peut évoluer ou régresser : une famille non officielle peut devenir réputée, puis notable ; une famille notable peut redevenir réputée, puis non officielle.
+
+Toute évolution ou rétrogradation est discutée et décidée par le staff.`]
+]),
 {section:'Vocal',number:1,title:'Enregistrement des communications vocales',text:'En jouant, vous acceptez que GREAT OWL STUDIO capte et conserve jusqu’à 24 mois les communications en jeu et sur le Discord officiel pour la modération, les réclamations et les preuves. Le serveur est réservé aux majeurs. Droits d’accès, suppression, opposition, rectification et limitation : direction@great-owl-studio.fr. D’autres joueurs peuvent aussi enregistrer ou diffuser sous leur propre responsabilité.'}
 ];
-export const ruleSections=['Toutes','Lexique RP','Général','RolePlay','RPK On','Famille','Vocal'];
+export const ruleSections=['Toutes','Lexique RP','Général','RolePlay','RPK On','Familles','Vocal'];

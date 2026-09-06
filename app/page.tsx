@@ -195,7 +195,7 @@ const icons = {
 const statusesByKind: Record<Kind, string[]> = {
   Personnage: ['À rencontrer', 'Rencontré', 'À approfondir', 'Proche', 'Perdu de vue'],
   Lieu: ['À découvrir', 'Visité', 'À explorer', 'Important', 'Dangereux'],
-  Connaissance: ['À vérifier', 'Soupçonné', 'Confirmé', 'Contredit', 'Obsolète'],
+  Connaissance: ['À classer', 'En cours d’étude', 'Documentée', 'À compléter', 'Archivée'],
   Projet: ['Idée', 'À préparer', 'En cours', 'En attente', 'Terminé', 'Abandonné'],
   Sort: ['À découvrir', 'À apprendre', 'En entraînement', 'Maîtrisé', 'Interdit'],
   'Note libre': ['Brouillon'],
@@ -1259,7 +1259,7 @@ export default function Home() {
               <h4>{open.sub}</h4>
               <div className="facts">
                 <span>
-                  <b>Statut</b>
+                  <b>{open.kind === 'Connaissance' ? 'État de la fiche' : 'Statut'}</b>
                   {open.status || 'À découvrir'}
                 </span>
                 {open.kind === 'Personnage' && (
@@ -2585,6 +2585,9 @@ function Editor({
     );
     save({
       ...d,
+      status: statusesByKind[d.kind].includes(d.status || '')
+        ? d.status
+        : statusesByKind[d.kind][0],
       tags:
         d.kind === 'Personnage' && d.house
           ? [...tagsWithoutHouse, d.house]
@@ -2669,9 +2672,9 @@ function Editor({
             </select>
           </label>
           <label>
-            Statut
+            {d.kind === 'Connaissance' ? 'État de la fiche' : 'Statut'}
             <select
-              value={d.status || statusesByKind[d.kind][0]}
+              value={statusesByKind[d.kind].includes(d.status || '') ? d.status : statusesByKind[d.kind][0]}
               onChange={(e) =>
                 setD({ ...d, status: e.target.value as Note['status'] })
               }
