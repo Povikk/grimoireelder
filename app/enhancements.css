@@ -2544,6 +2544,23 @@ html.grimoire-ready body::before { display: none; }
   width: min(100%, 1040px);
   margin-inline: auto;
 }
+.list.view-compact > article {
+  align-items: center;
+}
+.list.view-compact > article > div {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 9px;
+}
+.list.view-compact > article > div > small,
+.list.view-compact > article h3 {
+  margin: 0;
+  line-height: 1;
+}
+.list.view-compact > article > svg {
+  align-self: center;
+}
 .list.view-library {
   grid-template-columns: repeat(auto-fit, minmax(190px, 235px));
   justify-content: center;
