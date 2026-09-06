@@ -1980,7 +1980,7 @@ function RulesView({ query }: { query: string }) {
   );
   return (
     <section className="rules-page">
-      <img className="archive-background" src={`${import.meta.env.BASE_URL}launcher-magic-hall.png`} alt="" aria-hidden="true" />
+      <img className="archive-background" src={`${import.meta.env.BASE_URL}elderwood-archive.png`} alt="" aria-hidden="true" />
       <div className="rules-title">
         <div>
           <small>CODE DE CONDUITE · 56 RÈGLES</small>
@@ -2044,7 +2044,7 @@ function LoreView({ query }: { query: string }) {
   );
   return (
     <section className="lore-page">
-      <img className="archive-background" src={`${import.meta.env.BASE_URL}launcher-society.png`} alt="" aria-hidden="true" />
+      <img className="archive-background" src={`${import.meta.env.BASE_URL}elderwood-archive.png`} alt="" aria-hidden="true" />
       <div className="lore-title">
         <div>
           <small>ENCYCLOPÉDIE DU MONDE</small>
