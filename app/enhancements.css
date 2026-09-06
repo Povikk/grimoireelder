@@ -1457,6 +1457,16 @@
   color: #f0a7a0;
   font: 600 0.8rem/1.35 Inter, sans-serif;
 }
+.auth-password-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0 9px;
+  color: #91a29a;
+  font: 600 0.74rem/1.35 Inter, sans-serif;
+}
+.auth-password-hint.valid { color: #72c99a; }
+.auth-password-hint svg { width: 13px; height: 13px; }
 
 .auth-notice {
   position: fixed;

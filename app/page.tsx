@@ -1810,6 +1810,7 @@ function AuthPanel({
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const passwordLongEnough = password.length >= 8;
   const authRedirectUrl = () =>
     window.location.hostname === 'localhost'
       ? 'https://povikk.github.io/grimoireelder/'
@@ -1858,6 +1859,9 @@ function AuthPanel({
     setBusy(true);
     setMessage('');
     try {
+      if (password.length < 8) {
+        throw new Error('Le mot de passe doit contenir au moins 8 caractères.');
+      }
       if (mode === 'signup' && password !== confirmPassword) {
         throw new Error('Les deux mots de passe ne correspondent pas.');
       }
@@ -1959,15 +1963,17 @@ function AuthPanel({
               <div className="auth-input"><LogIn /><input id="grimoire-email" type="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} placeholder="sorcier@exemple.fr" required /></div>
               <label htmlFor="grimoire-password">Mot de passe</label>
               <div className="auth-input"><LockKeyhole /><input id="grimoire-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>
+              {mode === 'signup' && <p className={`auth-password-hint ${passwordLongEnough ? 'valid' : ''}`}>{passwordLongEnough ? <><Check /> Longueur suffisante</> : `${password.length}/8 caractères minimum`}</p>}
               {mode === 'signup' && (
                 <>
                   <label htmlFor="grimoire-password-confirm">Confirmer le mot de passe</label>
                   <div className="auth-input"><LockKeyhole /><input id="grimoire-password-confirm" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} required /></div>
                   {confirmPassword && password !== confirmPassword && <p className="auth-password-error">Les deux mots de passe ne correspondent pas.</p>}
+                  {confirmPassword && password === confirmPassword && passwordLongEnough && <p className="auth-password-hint valid"><Check /> Les deux mots de passe correspondent.</p>}
                 </>
               )}
               {message && <p className="auth-message">{message}</p>}
-              <button className="auth-submit" disabled={busy || !email || password.length < 8 || (mode === 'signup' && password !== confirmPassword)}>
+              <button className="auth-submit" disabled={busy}>
                 {busy ? 'Ouverture…' : mode === 'login' ? 'Entrer dans mon grimoire' : 'Créer mon grimoire'} <ChevronRight />
               </button>
             </form>
