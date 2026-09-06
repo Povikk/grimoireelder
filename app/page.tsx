@@ -301,6 +301,7 @@ export default function Home() {
     [templateOpen, setTemplateOpen] = useState(false),
     [viewMode, setViewMode] = useState<'list' | 'compact' | 'library'>('list'),
     [saveNotice, setSaveNotice] = useState(''),
+    [gettingStartedDismissed, setGettingStartedDismissed] = useState(() => typeof window !== 'undefined' && localStorage.getItem('elderwood-getting-started-dismissed') === 'true'),
     [wikiSeed, setWikiSeed] = useState<Note | null>(null),
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
@@ -642,6 +643,16 @@ export default function Home() {
   const characterCount = notes.filter(
     (note) => note.kind === 'Personnage' && (note.id !== 'joueur' || characterReady),
   ).length;
+  const gettingStartedProgress = Math.min(4, Number(characterReady) + Number(notes.length > 1) + Number(notes.some((note) => note.image)) + Number(notes.some((note) => note.eventDate)));
+  useEffect(() => {
+    if (gettingStartedProgress !== 4 || gettingStartedDismissed) return;
+    localStorage.setItem('elderwood-getting-started-dismissed', 'true');
+    setGettingStartedDismissed(true);
+  }, [gettingStartedProgress, gettingStartedDismissed]);
+  const dismissGettingStarted = () => {
+    localStorage.setItem('elderwood-getting-started-dismissed', 'true');
+    setGettingStartedDismissed(true);
+  };
   const closeTour = () => {
     localStorage.setItem('elderwood-onboarding-done', 'true');
     setTourOpen(false);
@@ -1031,7 +1042,7 @@ export default function Home() {
                     </div>
                     <Dices className="seal" />
                   </section>
-                  <section className="getting-started"><div><small>PRISE EN MAIN</small><h2>{Math.min(4, Number(characterReady) + Number(notes.length > 1) + Number(notes.some((note) => note.image)) + Number(notes.some((note) => note.eventDate)))}/4 étapes accomplies</h2></div><div><button className={characterReady ? 'done' : ''} onClick={() => mainCharacter && setEdit(mainCharacter)}><Check /> Créer ton personnage</button><button className={notes.length > 1 ? 'done' : ''} onClick={add}><Check /> Ajouter une première fiche</button><button className={notes.some((note) => note.image) ? 'done' : ''} onClick={() => document.querySelector<HTMLInputElement>('.photo-drop input')?.click()}><Check /> Ajouter une image</button><button className={notes.some((note) => note.eventDate) ? 'done' : ''} onClick={() => setSection('Chronologie')}><Check /> Commencer la chronologie</button></div></section>
+                  {!gettingStartedDismissed && gettingStartedProgress < 4 && <section className="getting-started"><button className="getting-started-dismiss" onClick={dismissGettingStarted} aria-label="Masquer la prise en main" title="Ne plus afficher"><X /></button><div><small>PRISE EN MAIN</small><h2>{gettingStartedProgress}/4 étapes accomplies</h2></div><div><button className={characterReady ? 'done' : ''} onClick={() => mainCharacter && setEdit(mainCharacter)}><Check /> Créer ton personnage</button><button className={notes.length > 1 ? 'done' : ''} onClick={add}><Check /> Ajouter une première fiche</button><button className={notes.some((note) => note.image) ? 'done' : ''} onClick={() => document.querySelector<HTMLInputElement>('.photo-drop input')?.click()}><Check /> Ajouter une image</button><button className={notes.some((note) => note.eventDate) ? 'done' : ''} onClick={() => setSection('Chronologie')}><Check /> Commencer la chronologie</button></div></section>}
                   <section className="first-actions" aria-label="Actions rapides">
                     <button
                       onClick={() =>
