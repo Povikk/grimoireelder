@@ -1,27 +1,49 @@
 export type Rule={section:string;number:number;title:string;text:string;critical?:boolean};
 const lex=[
-['Metagaming','Interdit d’utiliser des informations obtenues hors RP (vocal, chat, stream) pour avantager son personnage.'],
-['Freekill','Tuer sans raison RP valable ni contexte est interdit. Toute violence doit être justifiée en RP.'],
-['Revenge Kill','Après la mort, impossible de revenir se venger. Le personnage oublie les événements ayant mené à sa mort.'],
-['Free Attack','Attaquer sans raison RP valable ni interaction préalable est interdit.'],
-['Fear RP','Le personnage doit réagir avec réalisme et prudence face à une menace sérieuse, un supérieur ou un adversaire plus puissant.'],
-['Bunny Hopping','Sauter continuellement pour obtenir un avantage en combat ou en fuite est interdit.'],
-['Cheat / Use bug','Cheats, scripts, mods non autorisés et exploitation de bugs sont interdits et peuvent mener au bannissement définitif.'],
-['Mass RP','Il faut tenir compte de la présence passive de PNJ et civils dans les lieux publics. Ne pas entrer sans invitation dans le bureau du directeur.'],
-['Pain RP','Le personnage doit réagir de manière crédible à la douleur et aux blessures.'],
-['StreamHack','Utiliser les informations du stream d’un autre joueur pour obtenir un avantage est interdit.'],
-['Force RP','Ne jamais imposer une action, une interaction ou une conséquence à un autre joueur sans accord.'],
-['Power Gaming','Utiliser la physique du jeu pour accomplir des actions irréalisables dans l’univers est interdit.'],
-['Safe RP','Jouer systématiquement sans prendre de risque pour éviter toute conséquence est interdit.'],
-['Win RP','Le personnage ne doit pas toujours réussir. Il faut laisser place aux échecs et aux conséquences.'],
-['Logique RP','Caractère, histoire et apparence doivent évoluer de façon cohérente, progressive et justifiée en RP.'],
-['NLR (New Life Rule)','Après une mort, oublier les 15 minutes précédentes. Retour sur la zone interdit pendant au moins 20 minutes, sauf accord ou validation staff.'],
-['RPK Flash','Tuer immédiatement sans interaction ni contexte est interdit. Un meurtre exige un scénario, une interaction et une validation staff.'],
-['AFK Farm','Progresser ou gagner des ressources en restant inactif est interdit.'],
-['Roll','Un /roll par minute pour une même action, sauf échec critique. 0–15 : échec critique, 15–50 : échec, 50–85 : réussite, 85–100 : réussite critique.'],
-['FairPlay','Respect, courtoisie, honnêteté et bonne humeur sont obligatoires. Aucun avantage injuste.'],
-['Double Voc','Être connecté en vocal Discord pendant une scène RP en jeu est interdit.'],
-['ERP à caractère sexuel','Les scènes sexuelles sont interdites. Les romances respectueuses restent autorisées.']
+['Metagaming',`Le metagaming est interdit. Utiliser des informations obtenues hors RP — vocal, chat, streams ou autre — pour avantager votre personnage en RP est strictement sanctionné.`],
+['Freekill',`Le freekill est interdit. Tuer un joueur sans raison RP valable ou sans contexte est sanctionné. Chaque action violente doit être justifiée en RP.`],
+['Revenge Kill',`Le revenge kill est interdit. Vous ne pouvez pas revenir vous venger après la mort de votre personnage. Une mort RP implique une perte de mémoire des événements ayant mené à celle-ci.`],
+['Free Attack',`Le free attack est interdit. Attaquer un joueur sans raison RP valable ou sans interaction préalable est sanctionné. Toute agression doit être logique, justifiée et jouée en RP.`],
+['Fear RP',`Le Fear RP est obligatoire. Votre personnage n’est pas invincible : il doit réagir avec réalisme et prudence face à une menace sérieuse, comme une prise d’otage, la torture ou le surnombre. Ignorer le danger, provoquer volontairement en situation de faiblesse ou foncer sans réfléchir est considéré comme du No-Fear.
+
+Exemples : se moquer ou attaquer quelqu’un sans être en position de le faire ; refuser toute peur face à un supérieur ou un adversaire beaucoup plus puissant ; tenter de fuir sans logique alors que le personnage est maîtrisé ou gravement blessé.`],
+['Bunny Hopping',`Le bunny hopping — sauter sans cesse pour esquiver ou exploiter le déplacement — est interdit lorsqu’il procure un avantage déloyal en combat ou en fuite. Votre personnage doit agir de façon réaliste : sauter continuellement nuit à l’immersion et à l’équilibre du jeu.`],
+['Cheat / Use bug',`L’utilisation de cheats, scripts, mods non autorisés ou l’exploitation de bugs et glitches pour obtenir un avantage est strictement interdite. Toute triche détectée entraîne des sanctions immédiates pouvant aller jusqu’au bannissement définitif.`],
+['Mass RP',`Le Mass RP consiste à tenir compte de la présence passive des PNJ et civils dans les lieux publics. Vous devez adapter votre comportement à l’environnement et aux personnes présentes.
+
+Exemple : ne pas entrer dans le bureau du directeur sans y avoir été invité.`],
+['Pain RP',`Le Pain RP est obligatoire. Votre personnage doit réagir de manière crédible à la douleur : grimacer, gémir, ralentir ou montrer des signes de souffrance. Ignorer ou minimiser une douleur excessive nuit à l’immersion et peut être sanctionné.
+
+Exemples : continuer à courir normalement après une blessure grave ; ne montrer aucune réaction à des attaques ou blessures visibles.`],
+['StreamHack',`Utiliser des informations obtenues en regardant le stream d’un autre joueur afin d’en tirer un avantage en jeu est strictement interdit. Les sanctions peuvent aller jusqu’au bannissement permanent.`],
+['Force RP',`Le Force RP est interdit. Vous ne devez jamais imposer une action, une interaction ou une conséquence RP à un autre joueur sans son accord préalable. Le RP se pratique dans le respect et le consentement mutuel.`],
+['Power Gaming',`Le Power Gaming est interdit. Il consiste à exploiter la physique ou les mécaniques du jeu pour réaliser des actions impossibles dans l’univers.`],
+['Safe RP',`Le Safe RP — jouer systématiquement pour protéger son personnage ou ses biens sans jamais prendre de risque — est interdit. Fuir ou se protéger de manière irréaliste afin d’éviter toute conséquence nuit à l’immersion. Votre personnage doit accepter les risques liés à ses choix.`],
+['Win RP',`Le Win RP est interdit. Il consiste à faire réussir constamment son personnage, sans obstacle, échec ni conséquence. Le RP doit rester équilibré et laisser place à des victoires comme à des défaites crédibles.`],
+['Logique RP',`Le personnage doit rester cohérent avec l’univers et le serveur. Son caractère, son histoire ou son apparence physique ne peuvent pas changer soudainement sans justification RP crédible et progressive. Toute évolution doit être logique et jouée en RP.`],
+['NLR (New Life Rule)',`Après la mort de votre personnage, vous devez oublier les événements, rencontres, positions et conflits survenus durant les 15 minutes précédentes. Le retour sur la zone de la mort est interdit pendant au moins 20 minutes, sauf accord RP ou validation du staff.`],
+['RPK Flash',`Le RPK Flash — tuer un joueur immédiatement après l’avoir croisé, sans interaction ni contexte — est strictement interdit. Chaque meurtre doit reposer sur un scénario cohérent, une interaction préalable et un ticket RPK validé par le staff.
+
+Une scène de RPK doit prendre le temps de rendre hommage au personnage dont la whitelist prend fin : elle doit être profonde, développée et agréable à jouer pour les deux parties.
+
+Cette condition ne s’applique pas en cas de No-Fear ou de non-respect des zones RPK On du règlement.`],
+['AFK Farm',`Faire progresser son personnage ou gagner des ressources en restant inactif est interdit. Toute exploitation d’un système en étant AFK nuit à l’équilibre du serveur et à l’expérience des autres.`],
+['Roll',`Chaque /roll pour une même action doit être espacé d’une minute, sauf en cas d’échec critique.
+
+De 1 à 10 : échec critique.
+De 11 à 49 : échec.
+De 50 à 89 : réussite.
+De 90 à 100 : réussite critique.
+
+Les rolls doivent occuper une place importante dans votre RP passif. Par exemple, après avoir raté un /roll pour voler les clés de quelqu’un, vous devrez attendre une minute avant de réessayer.`],
+['FairPlay',`Chaque joueur s’engage à respecter les autres, à jouer honnêtement et à ne pas rechercher d’avantage injuste. Respect, courtoisie et bonne humeur sont essentiels à une expérience équitable. Toute attitude contraire au fair-play peut entraîner des sanctions.`],
+['Double Voc',`Il est interdit d’être connecté en vocal Discord tout en jouant une scène RP, afin de préserver l’immersion et d’éviter les échanges d’informations HRP susceptibles de désavantager les autres joueurs.`],
+['ERP à caractère sexuel',`Les scènes à caractère sexuel sont interdites. Les romances entre personnages restent autorisées lorsqu’elles demeurent respectueuses du roleplay.`],
+['Insinuations HRP',`Les insinuations HRP sont interdites car elles nuisent à l’immersion.
+
+Exemples : remplacer « Je suis dans ma tête » par « J’ai besoin de rester seul un peu » ou par un /it indiquant que le personnage semble absorbé ; poser sur Discord une question concernant une touche ; parler d’un sort appris plutôt que d’un sort « débloqué » ; dire qu’un personnage doit apprendre un sortilège ou rattraper son retard plutôt qu’évoquer une mécanique de jeu.
+
+Les insinuations HRP sont passibles de sanctions.`]
 ];
 const general=[
 ['Nom Roleplay','Nom original et crédible au format Prénom Nom. Noms réels, célèbres, connus, trolls, offensants, chiffres et majuscules abusives interdits.'],
@@ -30,7 +52,6 @@ const general=[
 ['Langage HRP','Le langage hors roleplay est interdit pendant les interactions en jeu.'],
 ['Publicité','Toute publicité ou invitation pour un autre serveur RP est interdite.'],
 ['Soundboards / Voice mods','Soundboards et outils de modification de voix sont interdits en vocal durant les sessions RP.'],
-['Insinuations HRP','Allusions et messages HRP sont interdits pendant les interactions en jeu.'],
 ['Arnaque / Boutique','Fraude dans la boutique et manipulation du staff pour obtenir argent ou avantages sont interdites.'],
 ['Partage de compte','Chaque joueur doit utiliser son compte personnel. Le partage de compte est interdit.'],
 ['Contestation','Toute contestation passe par un ticket Discord. Spam ou harcèlement du staff en privé interdit.'],
