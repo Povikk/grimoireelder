@@ -1172,11 +1172,11 @@ export default function Home() {
                           : section + 's'}
                   </h2>
                 </div>
-                <span>
-                  {shown.length} fiche{shown.length !== 1 && 's'}
-                </span>
+                <div className="heading-actions">
+                  <span>{shown.length} fiche{shown.length !== 1 && 's'}</span>
+                  <div className="view-switcher"><button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>Liste</button><button className={viewMode === 'compact' ? 'active' : ''} onClick={() => setViewMode('compact')}>Compact</button><button className={viewMode === 'library' ? 'active' : ''} onClick={() => setViewMode('library')}><LibraryBig /> Bibliothèque</button></div>
+                </div>
               </div>
-              <div className="view-switcher"><button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>Liste</button><button className={viewMode === 'compact' ? 'active' : ''} onClick={() => setViewMode('compact')}>Compact</button><button className={viewMode === 'library' ? 'active' : ''} onClick={() => setViewMode('library')}><LibraryBig /> Bibliothèque</button></div>
               <section className={`list view-${viewMode}`}>
                 {shown.slice(0, visibleNoteLimit).map((n) => {
                   const I = icons[n.kind];
