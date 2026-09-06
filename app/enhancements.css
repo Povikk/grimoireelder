@@ -1154,8 +1154,8 @@
     radial-gradient(ellipse, rgba(var(--house-rgb), .075), rgba(var(--house-rgb), .025) 31%, transparent 66%),
     radial-gradient(ellipse, rgba(var(--house-rgb), .055), rgba(var(--house-rgb), .018) 34%, transparent 68%);
   background-repeat: no-repeat;
-  background-size: 175% 48%, 190% 52%;
-  background-position: 20% 7%, 75% 88%;
+  background-size: 112% 48%, 118% 52%;
+  background-position: center 7%, center 88%;
   opacity: .62;
   will-change: background-position, opacity;
   animation: sidebar-house-glow 28s ease-in-out infinite alternate;
@@ -1173,14 +1173,16 @@
   z-index: -1;
   inset: 0 -18px 0 0;
   border-radius: 10px 0 0 10px;
-  background: linear-gradient(90deg, rgba(var(--house-rgb), .18), rgba(var(--house-rgb), .085) 62%, rgba(var(--house-rgb), .035));
+  background:
+    radial-gradient(ellipse at 82% 50%, rgba(var(--house-rgb), .12), transparent 68%),
+    linear-gradient(90deg, rgba(var(--house-rgb), .16), rgba(var(--house-rgb), .07) 42%, rgba(var(--house-rgb), .075));
   pointer-events: none;
 }
 @keyframes sidebar-house-glow {
-  0% { background-position: 15% 5%, 82% 91%; opacity: .5; }
-  34% { background-position: 82% 23%, 28% 72%; opacity: .66; }
-  68% { background-position: 35% 43%, 76% 58%; opacity: .56; }
-  100% { background-position: 74% 68%, 18% 34%; opacity: .68; }
+  0% { background-position: center 4%, center 94%; opacity: .5; }
+  34% { background-position: center 24%, center 74%; opacity: .66; }
+  68% { background-position: center 46%, center 56%; opacity: .56; }
+  100% { background-position: center 70%, center 31%; opacity: .68; }
 }
 @media (prefers-reduced-motion: reduce) {
   .side::after { animation: none; }
