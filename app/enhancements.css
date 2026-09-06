@@ -2669,6 +2669,37 @@ html[data-theme] .side,
 @media (prefers-reduced-motion: reduce) {
   .side::after { animation: none; background-position: center 48%; }
 }
+
+/* Catégories compactes et dépliables dans l’éditeur. */
+.detail-editor > article {
+  gap: 7px;
+  padding: 7px;
+  transition: border-color .18s ease, background .18s ease;
+}
+.detail-editor > article.expanded {
+  padding: 9px;
+  border-color: rgba(var(--house-rgb), .3);
+  background: rgba(var(--house-rgb), .045);
+}
+.detail-heading {
+  grid-template-columns: 32px minmax(0, 1fr) 30px 30px 30px;
+  align-items: center;
+}
+.detail-heading input {
+  min-height: 34px !important;
+  padding-block: 6px !important;
+  font-size: 15px !important;
+}
+.detail-heading .detail-toggle svg {
+  width: 16px;
+  transition: transform .18s ease;
+}
+.detail-editor > article:not(.expanded) .detail-toggle svg {
+  transform: rotate(-90deg);
+}
+@media (max-width: 600px) {
+  .detail-heading { grid-template-columns: 29px minmax(0, 1fr) 27px 27px 27px; }
+}
 .list > .empty {
   display: grid;
   min-height: 160px;

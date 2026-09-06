@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   Camera,
   Castle,
+  ChevronDown,
   ChevronRight,
   Compass,
   Dices,
@@ -1350,7 +1351,7 @@ export default function Home() {
                   <p>{open.nextAction}</p>
                 </section>
               )}
-              {open.details?.map((d) => (
+              {open.details?.filter((d) => richPlainText(d[1]).trim()).map((d) => (
                 <section key={d[0]}>
                   <h3>{d[0]}</h3>
                   <div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(d[1]) }} />
@@ -1653,7 +1654,7 @@ function AdminPanel({ close, openModeration }: { close: () => void; openModerati
         <div className="admin-users">{busy && <p>Ouverture du registre…</p>}{!busy && visible.map((user) => <button key={user.user_id} onClick={() => inspect(user)}><span className="admin-avatar">{(user.display_name || user.email || '?').slice(0, 1).toUpperCase()}</span><span><b>{user.display_name || 'Grimoire sans nom'}</b><small>{user.email}</small></span><span><b>{user.note_count}</b><small>fiches</small></span><span><b>{formatBytes(Number(user.storage_bytes))}</b><small>images</small></span><span><b>{formatDate(user.last_sign_in_at)}</b><small>dernière connexion</small></span><Eye /></button>)}</div>
       </> : <div className="admin-inspection">
         <header><button onClick={() => { setSelected(null); setUserNotes([]); }}>← Retour aux utilisateurs</button><div><small>MODE INSPECTION · LECTURE SEULE</small><h3>{selected.display_name || selected.email}</h3><p>{selected.email} · inscrit le {formatDate(selected.created_at)}</p></div></header>
-        {busy ? <p>Déchiffrement du grimoire…</p> : <div className="admin-notes">{!userNotes.length && <p>Ce grimoire ne contient aucune fiche.</p>}{userNotes.map((note) => <article className={expanded === note.id ? 'expanded' : ''} key={note.id}><button onClick={() => setExpanded(expanded === note.id ? null : note.id)}>{note.image && <img src={note.image} alt="" />}<span><small>{note.kind}</small><b>{note.title}</b><p>{richPlainText(note.text)}</p></span><Eye /></button>{expanded === note.id && <div className="admin-note-detail"><h4>{note.sub}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(note.text) }} />{note.details?.map((detail, index) => <section key={index}><h4>{detail[0]}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(detail[1]) }} /></section>)}</div>}</article>)}</div>}
+        {busy ? <p>Déchiffrement du grimoire…</p> : <div className="admin-notes">{!userNotes.length && <p>Ce grimoire ne contient aucune fiche.</p>}{userNotes.map((note) => <article className={expanded === note.id ? 'expanded' : ''} key={note.id}><button onClick={() => setExpanded(expanded === note.id ? null : note.id)}>{note.image && <img src={note.image} alt="" />}<span><small>{note.kind}</small><b>{note.title}</b><p>{richPlainText(note.text)}</p></span><Eye /></button>{expanded === note.id && <div className="admin-note-detail"><h4>{note.sub}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(note.text) }} />{note.details?.filter((detail) => richPlainText(detail[1]).trim()).map((detail, index) => <section key={index}><h4>{detail[0]}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(detail[1]) }} /></section>)}</div>}</article>)}</div>}
       </div>}
     </section>
   </div>;
@@ -2493,6 +2494,7 @@ function Editor({
   const [correcting, setCorrecting] = useState(false);
   const [correctionMessage, setCorrectionMessage] = useState('');
   const [closeWarning, setCloseWarning] = useState(false);
+  const [expandedDetail, setExpandedDetail] = useState<number | null>(null);
   const originalNote = useRef(note);
   type CorrectionMatch = { offset: number; length: number; message: string; replacements: { value: string }[] };
   const [correctionReview, setCorrectionReview] = useState<CorrectionMatch[]>([]);
@@ -2818,17 +2820,18 @@ function Editor({
             <legend>Catégories de la fiche</legend>
             <p>Ajoute des chapitres comme « Histoire », « Caractère » ou « Anecdotes ».</p>
             {(d.details || []).map((detail, index) => (
-              <article key={index}>
+              <article className={expandedDetail === index ? 'expanded' : ''} key={index}>
                 <div className="detail-heading">
+                  <button className="detail-toggle" type="button" title={expandedDetail === index ? 'Replier' : 'Déplier'} aria-label={expandedDetail === index ? 'Replier la catégorie' : 'Déplier la catégorie'} aria-expanded={expandedDetail === index} onClick={() => setExpandedDetail(expandedDetail === index ? null : index)}><ChevronDown /></button>
                   <input aria-label="Titre de la catégorie" value={detail[0]} placeholder="Titre de la catégorie" onChange={(e) => setD({ ...d, details: d.details?.map((item, itemIndex) => itemIndex === index ? [e.target.value, item[1]] : item) })} />
                   <button type="button" disabled={index === 0} title="Monter" onClick={() => { const next = [...(d.details || [])]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setD({ ...d, details: next }); }}>↑</button>
                   <button type="button" disabled={index === (d.details || []).length - 1} title="Descendre" onClick={() => { const next = [...(d.details || [])]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; setD({ ...d, details: next }); }}>↓</button>
                   <button type="button" title="Supprimer la catégorie" aria-label="Supprimer la catégorie" onClick={() => setD({ ...d, details: d.details?.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></button>
                 </div>
-                <CorrectableRichEditor value={detail[1]} placeholder="Contenu de cette catégorie…" onChange={(text) => setD((current) => ({ ...current, details: current.details?.map((item, itemIndex) => itemIndex === index ? [item[0], text] : item) }))} />
+                {expandedDetail === index && <CorrectableRichEditor value={detail[1]} placeholder="Contenu de cette catégorie…" onChange={(text) => setD((current) => ({ ...current, details: current.details?.map((item, itemIndex) => itemIndex === index ? [item[0], text] : item) }))} />}
               </article>
             ))}
-            <button type="button" className="add-detail" onClick={() => setD({ ...d, details: [...(d.details || []), ['Nouvelle catégorie', '']] })}><Plus /> Ajouter une catégorie</button>
+            <button type="button" className="add-detail" onClick={() => { const nextIndex = (d.details || []).length; setD({ ...d, details: [...(d.details || []), ['Nouvelle catégorie', '']] }); setExpandedDetail(nextIndex); }}><Plus /> Ajouter une catégorie</button>
           </fieldset>
           {(d.kind === 'Connaissance' || d.kind === 'Sort') && (
             <label className="wide">
