@@ -1881,7 +1881,7 @@ function AuthPanel({
         });
         if (error) throw error;
         if (data.session) cancel();
-        else setMessage('Ton grimoire est scellé. Ouvre la lettre reçue par mail pour l’activer.');
+        else setMessage(`Ton compte a bien été créé !\n\nUn e-mail de confirmation a été envoyé à ${email}. Clique sur le lien contenu dans ce message pour activer ton grimoire, puis tu pourras te connecter. Pense à vérifier les courriers indésirables si tu ne le vois pas.`);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Connexion impossible.');
@@ -1963,7 +1963,7 @@ function AuthPanel({
               <div className="auth-input"><LogIn /><input id="grimoire-email" type="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} placeholder="sorcier@exemple.fr" required /></div>
               <label htmlFor="grimoire-password">Mot de passe</label>
               <div className="auth-input"><LockKeyhole /><input id="grimoire-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></div>
-              {mode === 'signup' && <p className={`auth-password-hint ${passwordLongEnough ? 'valid' : ''}`}>{passwordLongEnough ? <><Check /> Longueur suffisante</> : `${password.length}/8 caractères minimum`}</p>}
+              {mode === 'signup' && <p className={`auth-password-hint ${passwordLongEnough ? 'valid' : ''}`}>{passwordLongEnough ? <><Check /> Mot de passe valide. 8 caractères minimum.</> : password.length ? `Il manque ${8 - password.length} caractère${8 - password.length > 1 ? 's' : ''}. Minimum requis : 8.` : 'Le mot de passe doit contenir au moins 8 caractères.'}</p>}
               {mode === 'signup' && (
                 <>
                   <label htmlFor="grimoire-password-confirm">Confirmer le mot de passe</label>
