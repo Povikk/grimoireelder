@@ -2953,3 +2953,42 @@ html[data-theme] .side,
   .house-reader-visual { height: 190px; margin: -27px -21px 23px; }
   .house-reader-crest { left: 17px; bottom: 11px; width: 86px; height: 86px; }
 }
+
+/* Aperçu fidèle des fiches depuis l’administration. */
+.admin-fiche-preview {
+  position: fixed !important;
+  z-index: 125 !important;
+  inset: 0;
+}
+.admin-fiche-preview .sheet {
+  position: relative;
+}
+.admin-preview-label {
+  position: absolute;
+  z-index: 4;
+  top: 18px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(var(--house-rgb), .38);
+  border-radius: 999px;
+  background: rgba(5, 18, 15, .82);
+  color: #d8e4dd;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+.admin-preview-label svg {
+  width: 14px;
+  color: var(--house);
+}
+.admin-notes > article > button {
+  cursor: pointer;
+}
+.admin-notes > article > button:hover {
+  background: rgba(var(--house-rgb), .07);
+}

@@ -1639,12 +1639,42 @@ function LinkedReferences({ note, notes, open }: { note: Note; notes: Note[]; op
   if (!linked.length) return null;
   return <section className="linked-references"><h3>Fiches liées</h3><p>Références détectées avec @nom de la fiche.</p><div>{linked.map((candidate) => <button onClick={() => open(candidate)} key={candidate.id}>@{candidate.title}<ChevronRight /></button>)}</div></section>;
 }
+function AdminSheetPreview({ note, notes, back, open }: { note: Note; notes: Note[]; back: () => void; open: (note: Note) => void }) {
+  const Icon = icons[note.kind];
+  return <div className="overlay fiche-overlay admin-fiche-preview" onMouseDown={(event) => event.target === event.currentTarget && back()}>
+    <article className={`sheet ${note.image ? 'with-image' : ''}`} role="dialog" aria-modal="true" aria-label={`Aperçu de ${note.title}`}>
+      <button className="close" onClick={back} aria-label="Retour au grimoire"><X /></button>
+      <div className="admin-preview-label"><Eye /> Aperçu joueur</div>
+      <div className="cover">{note.image ? <><span className="image-backdrop" style={{ backgroundImage: `url(${note.image})` }} /><img src={note.image} alt={note.title} /></> : <><span>✦　·　✧　·　✦</span><Icon /></>}</div>
+      <div className="body">
+        <small>{note.kind}</small><h2>{note.title}</h2>{note.sub && <h4>{note.sub}</h4>}
+        <div className="facts">
+          <span><b>{note.kind === 'Connaissance' ? 'État de la fiche' : 'Statut'}</b>{note.status || 'À découvrir'}</span>
+          {note.kind === 'Personnage' && <span><b>Relation</b>{note.relation || 'Inconnue'}</span>}
+          {note.kind === 'Personnage' && <span className={`house-fact ${note.house?.toLowerCase() || 'none'}`}><b>Maison</b>{note.house || 'Sans maison'}</span>}
+          {note.kind === 'Personnage' && <span><b>Année</b>{note.schoolYear || 'Non renseignée'}</span>}
+          {note.kind === 'Personnage' && note.age && <span><b>Âge</b>{note.age} ans</span>}
+          {note.kind === 'Connaissance' && note.knowledge && <span><b>Connaissance</b>{note.knowledge}</span>}
+          {note.kind === 'Sort' && <><span><b>Domaine</b>{note.spellDomain || 'Non classé'}</span><span><b>Maîtrise</b>{note.mastery || 'À étudier'}</span></>}
+        </div>
+        <Tags tags={note.tags} />
+        <div className="intro rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(note.text) }} />
+        {note.kind === 'Sort' && note.incantation && <section className="spell-incantation"><small>INCANTATION</small><p>{note.incantation}</p></section>}
+        {(note.kind === 'Connaissance' || note.kind === 'Sort') && note.source && <section className="knowledge-source"><h3>{note.kind === 'Sort' ? 'Source d’apprentissage' : 'Comment je le sais'}</h3><p>{note.source}</p></section>}
+        {note.kind === 'Projet' && !!note.tasks?.length && <section className="project-checklist"><div><h3>Étapes du projet</h3><span>{note.tasks.filter((task) => task.done).length}/{note.tasks.length}</span></div>{note.tasks.map((task) => <label key={task.id}><input type="checkbox" checked={task.done} readOnly /><span>{task.text}</span></label>)}</section>}
+        {note.kind === 'Projet' && note.nextAction && <section className="next-action"><small>PROCHAINE ACTION</small><p>{note.nextAction}</p></section>}
+        {note.details?.filter((detail) => richPlainText(detail[1]).trim()).map((detail) => <section key={detail[0]}><h3>{detail[0]}</h3><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(detail[1]) }} /></section>)}
+        <LinkedReferences note={note} notes={notes} open={open} />
+      </div>
+    </article>
+  </div>;
+}
 function AdminPanel({ close, openModeration }: { close: () => void; openModeration: () => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [userNotes, setUserNotes] = useState<Note[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Note | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const refreshUsers = async () => {
@@ -1655,7 +1685,7 @@ function AdminPanel({ close, openModeration }: { close: () => void; openModerati
   };
   useEffect(() => { refreshUsers(); }, []);
   const inspect = async (user: AdminUser) => {
-    setSelected(user); setExpanded(null); setBusy(true); setError('');
+    setSelected(user); setPreview(null); setBusy(true); setError('');
     try { setUserNotes((await loadAdminNotes(user.user_id)) as Note[]); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Impossible d’ouvrir ce grimoire.'); }
     finally { setBusy(false); }
@@ -1673,9 +1703,10 @@ function AdminPanel({ close, openModeration }: { close: () => void; openModerati
         <div className="admin-users">{busy && <p>Ouverture du registre…</p>}{!busy && visible.map((user) => <button key={user.user_id} onClick={() => inspect(user)}><span className="admin-avatar">{(user.display_name || user.email || '?').slice(0, 1).toUpperCase()}</span><span><b>{user.display_name || 'Grimoire sans nom'}</b><small>{user.email}</small></span><span><b>{user.note_count}</b><small>fiches</small></span><span><b>{formatBytes(Number(user.storage_bytes))}</b><small>images</small></span><span><b>{formatDate(user.last_sign_in_at)}</b><small>dernière connexion</small></span><Eye /></button>)}</div>
       </> : <div className="admin-inspection">
         <header><button onClick={() => { setSelected(null); setUserNotes([]); }}>← Retour aux utilisateurs</button><div><small>MODE INSPECTION · LECTURE SEULE</small><h3>{selected.display_name || selected.email}</h3><p>{selected.email} · inscrit le {formatDate(selected.created_at)}</p></div></header>
-        {busy ? <p>Déchiffrement du grimoire…</p> : <div className="admin-notes">{!userNotes.length && <p>Ce grimoire ne contient aucune fiche.</p>}{userNotes.map((note) => <article className={expanded === note.id ? 'expanded' : ''} key={note.id}><button onClick={() => setExpanded(expanded === note.id ? null : note.id)}>{note.image && <img src={note.image} alt="" />}<span><small>{note.kind}</small><b>{note.title}</b><p>{richPlainText(note.text)}</p></span><Eye /></button>{expanded === note.id && <div className="admin-note-detail"><h4>{note.sub}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(note.text) }} />{note.details?.filter((detail) => richPlainText(detail[1]).trim()).map((detail, index) => <section key={index}><h4>{detail[0]}</h4><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(detail[1]) }} /></section>)}</div>}</article>)}</div>}
+        {busy ? <p>Déchiffrement du grimoire…</p> : <div className="admin-notes">{!userNotes.length && <p>Ce grimoire ne contient aucune fiche.</p>}{userNotes.map((note) => <article key={note.id}><button onClick={() => setPreview(note)}>{note.image && <img src={note.image} alt="" />}<span><small>{note.kind}</small><b>{note.title}</b><p>{richPlainText(note.text)}</p></span><Eye /></button></article>)}</div>}
       </div>}
     </section>
+    {preview && <AdminSheetPreview note={preview} notes={userNotes} back={() => setPreview(null)} open={setPreview} />}
   </div>;
 }
 function PublicLanding({ connect, explore, school }: { connect: () => void; explore: () => void; school: () => void }) {
