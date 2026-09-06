@@ -1156,6 +1156,21 @@
     linear-gradient(180deg, transparent 45%, rgba(var(--house-rgb), .018) 76%, rgba(var(--house-rgb), .03));
 }
 .side > * { position: relative; z-index: 1; }
+.side > button.active {
+  isolation: isolate;
+  overflow: visible;
+  background: transparent;
+  box-shadow: inset 3px 0 var(--house), 0 0 16px rgba(var(--house-rgb), .07);
+}
+.side > button.active::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 -18px 0 0;
+  border-radius: 10px 0 0 10px;
+  background: linear-gradient(90deg, rgba(var(--house-rgb), .18), rgba(var(--house-rgb), .085) 62%, rgba(var(--house-rgb), .035));
+  pointer-events: none;
+}
 @keyframes sidebar-embers {
   from { opacity: .35; transform: translateY(0); }
   to { opacity: .85; transform: translateY(-7px); }
