@@ -1147,13 +1147,16 @@
 .side::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -14% -38%;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 2% 72%, rgba(var(--house-rgb), .055), transparent 27%),
-    radial-gradient(ellipse at 76% 98%, rgba(var(--house-rgb), .045), transparent 24%),
-    linear-gradient(180deg, transparent 45%, rgba(var(--house-rgb), .018) 76%, rgba(var(--house-rgb), .03));
+    radial-gradient(ellipse at 42% 25%, rgba(var(--house-rgb), .115), rgba(var(--house-rgb), .045) 27%, transparent 58%),
+    radial-gradient(ellipse at 58% 72%, rgba(var(--house-rgb), .09), rgba(var(--house-rgb), .03) 31%, transparent 63%);
+  filter: blur(15px);
+  opacity: .72;
+  will-change: transform, opacity;
+  animation: sidebar-house-glow 24s ease-in-out infinite alternate;
 }
 .side > * { position: relative; z-index: 1; }
 .side > button.active {
@@ -1170,6 +1173,15 @@
   border-radius: 10px 0 0 10px;
   background: linear-gradient(90deg, rgba(var(--house-rgb), .18), rgba(var(--house-rgb), .085) 62%, rgba(var(--house-rgb), .035));
   pointer-events: none;
+}
+@keyframes sidebar-house-glow {
+  0% { transform: translate3d(-6%, -3%, 0) scale(1); opacity: .58; }
+  28% { transform: translate3d(5%, 5%, 0) scale(1.06); opacity: .76; }
+  61% { transform: translate3d(-2%, 10%, 0) scale(.98); opacity: .65; }
+  100% { transform: translate3d(7%, -1%, 0) scale(1.04); opacity: .8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side::after { animation: none; }
 }
 @keyframes sidebar-embers {
   from { opacity: .35; transform: translateY(0); }
