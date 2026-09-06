@@ -1144,7 +1144,19 @@
   background-size: 57px 71px, 83px 91px;
   animation: sidebar-embers 10s ease-in-out infinite alternate;
 }
-.side > * { position: relative; }
+.side::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 8% 72%, rgba(var(--house-rgb), .13), transparent 34%),
+    radial-gradient(ellipse at 72% 98%, rgba(var(--house-rgb), .11), transparent 30%),
+    linear-gradient(180deg, rgba(var(--house-rgb), .035), rgba(var(--house-rgb), .075));
+  mix-blend-mode: screen;
+}
+.side > * { position: relative; z-index: 1; }
 @keyframes sidebar-embers {
   from { opacity: .35; transform: translateY(0); }
   to { opacity: .85; transform: translateY(-7px); }
