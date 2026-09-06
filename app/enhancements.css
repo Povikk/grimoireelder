@@ -1187,6 +1187,32 @@
 @media (prefers-reduced-motion: reduce) {
   .side::after { animation: none; }
 }
+
+/* Sidebar stable : aucun halo mobile ni variation de largeur au défilement. */
+.side::before {
+  animation: none;
+  transform: none;
+  opacity: .48;
+}
+.side::after {
+  display: none;
+  animation: none;
+}
+.side {
+  scrollbar-width: none;
+}
+.side::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.side > button.active {
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(var(--house-rgb), .13), rgba(var(--house-rgb), .065));
+  box-shadow: inset 3px 0 var(--house);
+}
+.side > button.active::after {
+  display: none;
+}
 @keyframes sidebar-embers {
   from { opacity: .35; transform: translateY(0); }
   to { opacity: .85; transform: translateY(-7px); }
