@@ -13,12 +13,14 @@ import {
   ImagePlus,
   Eye,
   LayoutDashboard,
+  List,
   LibraryBig,
   Link2,
   LockKeyhole,
   LogIn,
   MapPin,
   Network,
+  Rows3,
   StickyNote,
   Menu,
   Palette,
@@ -1174,7 +1176,7 @@ export default function Home() {
                 </div>
                 <div className="heading-actions">
                   <span>{shown.length} fiche{shown.length !== 1 && 's'}</span>
-                  <div className="view-switcher"><button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>Liste</button><button className={viewMode === 'compact' ? 'active' : ''} onClick={() => setViewMode('compact')}>Compact</button><button className={viewMode === 'library' ? 'active' : ''} onClick={() => setViewMode('library')}><LibraryBig /> Bibliothèque</button></div>
+                  <div className="view-switcher"><button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}><List /> Liste</button><button className={viewMode === 'compact' ? 'active' : ''} onClick={() => setViewMode('compact')}><Rows3 /> Compact</button><button className={viewMode === 'library' ? 'active' : ''} onClick={() => setViewMode('library')}><LibraryBig /> Bibliothèque</button></div>
                 </div>
               </div>
               <section className={`list view-${viewMode}`}>
