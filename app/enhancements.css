@@ -2548,11 +2548,33 @@ html.grimoire-ready body::before { display: none; }
   grid-template-columns: repeat(auto-fit, minmax(190px, 235px));
   justify-content: center;
   width: 100%;
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  background: transparent !important;
 }
 .list.view-library > article {
   width: 100%;
+}
+.list.view-library > article > div {
+  display: grid;
+  align-content: end;
+  gap: 4px;
+}
+.list.view-library > article > div > small {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+.list.view-library > article h3 {
+  display: block;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.05;
+}
+.list.view-library > article p {
+  margin-top: 5px;
+}
+.list.view-library > .empty {
+  grid-column: 1 / -1;
 }
 .list > .empty {
   display: grid;
