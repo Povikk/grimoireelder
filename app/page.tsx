@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
   BookOpen,
+  CalendarDays,
   BriefcaseBusiness,
   Camera,
   Castle,
@@ -12,10 +13,12 @@ import {
   ImagePlus,
   Eye,
   LayoutDashboard,
+  LibraryBig,
   Link2,
   LockKeyhole,
   LogIn,
   MapPin,
+  Network,
   StickyNote,
   Menu,
   Palette,
@@ -84,6 +87,7 @@ type Note = {
   house?: CharacterHouse;
   age?: number;
   schoolYear?: SchoolYear;
+  eventDate?: string;
   knowledge?:
     | 'Connu en RP'
     | 'Soupçonné'
@@ -291,6 +295,9 @@ export default function Home() {
     [tourStep, setTourStep] = useState(0),
     [wikiOpen, setWikiOpen] = useState(false),
     [adminOpen, setAdminOpen] = useState(false),
+    [templateOpen, setTemplateOpen] = useState(false),
+    [viewMode, setViewMode] = useState<'list' | 'compact' | 'library'>('list'),
+    [saveNotice, setSaveNotice] = useState(''),
     [wikiSeed, setWikiSeed] = useState<Note | null>(null),
     [wikiEntries, setWikiEntries] = useState<WikiSubmission[]>([]),
     [wikiAdmin, setWikiAdmin] = useState(false);
@@ -597,20 +604,7 @@ export default function Home() {
       ),
     [globalResults, searchSource, searchTag],
   );
-  const add = () =>
-    setEdit({
-      id: crypto.randomUUID(),
-      kind: section === 'Toutes' ? 'Personnage' : (section as Kind),
-      title: '',
-      sub: '',
-      text: '',
-      tags: [],
-      status: statusesByKind[section === 'Toutes' ? 'Personnage' : (section as Kind)][0],
-      relation: 'Inconnue',
-      schoolYear: (section === 'Toutes' || section === 'Personnage') ? 'Première année' : undefined,
-      imageSize: 100,
-      essential: false,
-    });
+  const add = () => setTemplateOpen(true);
   const addKind = (kind: Kind) =>
     setEdit({
       id: crypto.randomUUID(),
@@ -625,6 +619,10 @@ export default function Home() {
       imageSize: 100,
       essential: false,
     });
+  const addTemplate = (template: { kind: Kind; title: string; sub: string; tags: string[]; details: string[][] }) => {
+    setTemplateOpen(false);
+    setEdit({ id: crypto.randomUUID(), kind: template.kind, title: '', sub: template.sub, text: '', tags: template.tags, details: template.details, status: statusesByKind[template.kind][0], relation: template.kind === 'Personnage' ? 'Inconnue' : undefined, schoolYear: template.kind === 'Personnage' ? 'Première année' : undefined, imageSize: 100, essential: false });
+  };
   const addLooseNote = () =>
     setNotes((current) => [{
       id: crypto.randomUUID(), kind: 'Note libre', title: 'Nouvelle note', sub: '', text: '', tags: [],
@@ -739,6 +737,8 @@ export default function Home() {
         {currentUser && <button className={section === 'Tableau' ? 'active' : ''} onClick={() => { setSection('Tableau'); setMenu(false); setQ(''); }}>
           <StickyNote /> Notes diverses<em>{notes.filter((note) => note.kind === 'Note libre').length}</em>
         </button>}
+        {currentUser && <button className={section === 'Chronologie' ? 'active' : ''} onClick={() => { setSection('Chronologie'); setMenu(false); setQ(''); }}><CalendarDays /> Chronologie</button>}
+        {currentUser && <button className={section === 'Relations' ? 'active' : ''} onClick={() => { setSection('Relations'); setMenu(false); setQ(''); }}><Network /> Relations</button>}
         <p className="archive-label">ARCHIVES OFFICIELLES</p>
         {!currentUser && <button className={section === 'Accueil' ? 'active' : ''} onClick={() => { setSection('Accueil'); setMenu(false); setQ(''); }}>
           <Sparkles /> Accueil
@@ -986,6 +986,10 @@ export default function Home() {
             <ElderwoodView query={q} />
           ) : section === 'Tableau' ? (
             <MagicBoard notes={notes.filter((note) => note.kind === 'Note libre')} update={(updated) => setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))} remove={(id) => setNotes((current) => current.filter((note) => note.id !== id))} add={addLooseNote} />
+          ) : section === 'Chronologie' ? (
+            <TimelineView notes={notes} open={setOpen} edit={setEdit} />
+          ) : section === 'Relations' ? (
+            <RelationsView notes={notes} open={setOpen} />
           ) : (
             <>
               {section === 'Toutes' && !q && (
@@ -1024,6 +1028,7 @@ export default function Home() {
                     </div>
                     <Dices className="seal" />
                   </section>
+                  <section className="getting-started"><div><small>PRISE EN MAIN</small><h2>{Math.min(4, Number(characterReady) + Number(notes.length > 1) + Number(notes.some((note) => note.image)) + Number(notes.some((note) => note.eventDate)))}/4 étapes accomplies</h2></div><div><button className={characterReady ? 'done' : ''} onClick={() => mainCharacter && setEdit(mainCharacter)}><Check /> Créer ton personnage</button><button className={notes.length > 1 ? 'done' : ''} onClick={add}><Check /> Ajouter une première fiche</button><button className={notes.some((note) => note.image) ? 'done' : ''} onClick={() => document.querySelector<HTMLInputElement>('.photo-drop input')?.click()}><Check /> Ajouter une image</button><button className={notes.some((note) => note.eventDate) ? 'done' : ''} onClick={() => setSection('Chronologie')}><Check /> Commencer la chronologie</button></div></section>
                   <section className="first-actions" aria-label="Actions rapides">
                     <button
                       onClick={() =>
@@ -1171,11 +1176,12 @@ export default function Home() {
                   {shown.length} fiche{shown.length !== 1 && 's'}
                 </span>
               </div>
-              <section className="list">
+              <div className="view-switcher"><button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>Liste</button><button className={viewMode === 'compact' ? 'active' : ''} onClick={() => setViewMode('compact')}>Compact</button><button className={viewMode === 'library' ? 'active' : ''} onClick={() => setViewMode('library')}><LibraryBig /> Bibliothèque</button></div>
+              <section className={`list view-${viewMode}`}>
                 {shown.slice(0, visibleNoteLimit).map((n) => {
                   const I = icons[n.kind];
                   return (
-                    <article onClick={() => setOpen(n)} key={n.id}>
+                    <article className={`kind-${n.kind.toLowerCase().replace(' ', '-')}`} onClick={() => setOpen(n)} key={n.id}>
                       <i className={n.image ? 'note-thumb' : ''}>
                         {n.image ? <img src={n.image} alt="" /> : <I />}
                       </i>
@@ -1348,6 +1354,7 @@ export default function Home() {
                   <div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(d[1]) }} />
                 </section>
               ))}
+              <LinkedReferences note={open} notes={notes} open={(note) => setOpen(note)} />
               <div className="actions">
                 <button className="action-wiki" onClick={() => { setWikiSeed(open); setOpen(null); setWikiOpen(true); }}>
                   <Send /> Proposer au wiki
@@ -1505,6 +1512,7 @@ export default function Home() {
           openModeration={() => { setAdminOpen(false); setWikiOpen(true); }}
         />
       )}
+      {templateOpen && <TemplatePicker close={() => setTemplateOpen(false)} choose={addTemplate} />}
       {edit && (
         <Editor
           note={edit}
@@ -1517,9 +1525,12 @@ export default function Home() {
             );
             setEdit(null);
             setOpen(n);
+            setSaveNotice('La fiche a été scellée dans ton grimoire.');
+            window.setTimeout(() => setSaveNotice(''), 2600);
           }}
         />
       )}
+      {saveNotice && <div className="save-rune-notice"><Sparkles /><span><b>Encre scellée</b>{saveNotice}</span></div>}
     </main>
   );
 }
@@ -1579,6 +1590,32 @@ function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, cl
       <div className="wiki-list"><div className="wiki-list-heading"><h3>{admin ? 'Demandes reçues' : 'Mes propositions'}</h3>{admin && !demoPending && <button onClick={() => { setDemoPending(true); setMessage(''); }}><Sparkles /> Voir une demande d’exemple</button>}</div>{!visible.length && !demoPending && <p className="wiki-empty">Aucune proposition pour le moment.</p>}{admin && demoPending && <article className="wiki-pending wiki-demo"><span className="demo-ribbon">SIMULATION</span><small>Lieu · Château d’Elderwood</small><h4>La Salle des Murmures</h4><em>Une ancienne salle d’étude oubliée sous la bibliothèque</em><p>Cette pièce circulaire possède une acoustique étrange : les conversations prononcées près des murs semblent réapparaître quelques minutes plus tard à l’autre bout de la salle. Des élèves l’utiliseraient pour étudier les manifestations résiduelles de l’Écho.</p><footer>Proposé par : autrejoueur@exemple.fr<br />Source déclarée : découverte lors d’une scène RP, à vérifier avec le lore officiel.</footer><span className="wiki-status">En attente</span><div><button onClick={() => { setDemoPending(false); setMessage('Simulation : la fiche aurait été publiée et serait devenue visible par tous.'); }}><Check /> Publier</button><button onClick={() => { setDemoPending(false); setMessage('Simulation : la proposition aurait été refusée sans modifier les archives.'); }}><X /> Refuser</button></div></article>}{visible.map((entry) => <article key={entry.id} className={`wiki-${entry.status}`}><small>{entry.category} · {entry.section}</small><h4>{entry.title}</h4>{entry.subtitle && <em>{entry.subtitle}</em>}<p>{entry.content}</p>{entry.source && <footer>Source : {entry.source}</footer>}<span className="wiki-status">{entry.status === 'pending' ? 'En attente' : entry.status === 'approved' ? 'Publiée' : 'Refusée'}</span>{admin && entry.status === 'pending' && <div><button disabled={busy} onClick={() => review(entry.id, 'approved')}><Check /> Publier</button><button disabled={busy} onClick={() => review(entry.id, 'rejected')}><X /> Refuser</button></div>}</article>)}</div>
     </section>
   </div>;
+}
+const sheetTemplates: { kind: Kind; title: string; sub: string; tags: string[]; details: string[][] }[] = [
+  { kind: 'Personnage', title: 'Élève', sub: 'Élève d’Elderwood', tags: ['Élève'], details: [['Histoire',''],['Caractère',''],['Relations',''],['Objectifs',''],['Anecdotes','']] },
+  { kind: 'Personnage', title: 'Professeur', sub: 'Membre du personnel d’Elderwood', tags: ['Professeur'], details: [['Parcours',''],['Matière enseignée',''],['Caractère',''],['Réputation','']] },
+  { kind: 'Lieu', title: 'Lieu', sub: 'Lieu à découvrir', tags: ['Lieu'], details: [['Description',''],['Ambiance',''],['Accès',''],['Secrets et rumeurs','']] },
+  { kind: 'Sort', title: 'Sort', sub: 'Formule magique', tags: ['Magie'], details: [['Effet',''],['Gestuelle',''],['Limites et risques',''],['Origine','']] },
+  { kind: 'Connaissance', title: 'Créature', sub: 'Créature magique', tags: ['Créature'], details: [['Apparence',''],['Comportement',''],['Habitat',''],['Dangers','']] },
+  { kind: 'Connaissance', title: 'Objet magique', sub: 'Artefact ou curiosité', tags: ['Objet'], details: [['Description',''],['Pouvoirs',''],['Limites',''],['Provenance','']] },
+  { kind: 'Projet', title: 'Événement', sub: 'Événement de la chronologie', tags: ['Événement'], details: [['Contexte',''],['Déroulement',''],['Conséquences','']] },
+];
+function TemplatePicker({ close, choose }: { close: () => void; choose: (template: typeof sheetTemplates[number]) => void }) {
+  return <div className="overlay template-overlay"><section className="template-picker"><button className="close" onClick={close}><X /></button><small>UNE PAGE ADAPTÉE À TON IDÉE</small><h2>Que veux-tu inscrire&nbsp;?</h2><p>Le modèle prépare les catégories utiles. Tout reste modifiable ensuite.</p><div>{sheetTemplates.map((template) => { const Icon = icons[template.kind]; return <button onClick={() => choose(template)} key={template.title}><i><Icon /></i><span><b>{template.title}</b><small>{template.sub}</small></span><ChevronRight /></button>; })}</div></section></div>;
+}
+function TimelineView({ notes, open, edit }: { notes: Note[]; open: (note: Note) => void; edit: (note: Note) => void }) {
+  const dated = [...notes].filter((note) => note.eventDate).sort((a,b) => String(b.eventDate).localeCompare(String(a.eventDate)));
+  return <section className="timeline-page"><header><small>FIL DE TON HISTOIRE</small><h1>Chronologie personnelle</h1><p>Ajoute une date à n’importe quelle fiche pour la faire apparaître ici.</p></header>{!dated.length && <div className="timeline-empty"><CalendarDays /><h2>Ta chronologie attend son premier événement</h2><p>Ouvre une fiche et renseigne « Date dans la chronologie ».</p></div>}<div className="timeline-line">{dated.map((note) => <button onClick={() => open(note)} key={note.id}><time>{new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date(`${note.eventDate}T12:00:00`))}</time><i /><span><small>{note.kind}</small><b>{note.title}</b><p>{note.sub}</p></span></button>)}</div></section>;
+}
+function RelationsView({ notes, open }: { notes: Note[]; open: (note: Note) => void }) {
+  const people = notes.filter((note) => note.kind === 'Personnage'); const main = people.find((note) => note.id === 'joueur') || people[0];
+  return <section className="relations-page"><header><small>CONSTELLATION SOCIALE</small><h1>Carte des relations</h1><p>Les personnages sont regroupés selon la relation indiquée dans leur fiche.</p></header>{main && <button className="relation-center" onClick={() => open(main)}>{main.image ? <img src={main.image} alt="" /> : <Users />}<b>{main.title}</b><small>Personnage principal</small></button>}<div className="relation-orbits">{people.filter((note) => note.id !== main?.id).map((note) => <button className={`relation-${(note.relation || 'Inconnue').toLowerCase()}`} onClick={() => open(note)} key={note.id}>{note.image ? <img src={note.image} alt="" /> : <Users />}<span><b>{note.title}</b><small>{note.relation || 'Inconnue'}</small></span></button>)}</div></section>;
+}
+function LinkedReferences({ note, notes, open }: { note: Note; notes: Note[]; open: (note: Note) => void }) {
+  const content = `${richPlainText(note.text)} ${(note.details || []).map((detail) => richPlainText(detail[1])).join(' ')}`.toLowerCase();
+  const linked = notes.filter((candidate) => candidate.id !== note.id && content.includes(`@${candidate.title.toLowerCase()}`));
+  if (!linked.length) return null;
+  return <section className="linked-references"><h3>Fiches liées</h3><p>Références détectées avec @nom de la fiche.</p><div>{linked.map((candidate) => <button onClick={() => open(candidate)} key={candidate.id}>@{candidate.title}<ChevronRight /></button>)}</div></section>;
 }
 function AdminPanel({ close, openModeration }: { close: () => void; openModeration: () => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -2739,6 +2776,10 @@ function Editor({
               value={d.sub}
               onChange={(e) => setD({ ...d, sub: e.target.value })}
             />
+          </label>
+          <label>
+            Date dans la chronologie
+            <input type="date" value={d.eventDate || ''} onChange={(e) => setD({ ...d, eventDate: e.target.value || undefined })} />
           </label>
           {d.kind === 'Sort' && (
             <label className="wide spell-formula">
