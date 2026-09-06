@@ -267,6 +267,14 @@ const loreAccent = (section: string) => ({
   Chronologie: '#c57732', Glossaire: '#3da67a', Créatures: '#4b9b52', Société: '#a86cb9',
   Familles: '#b27b46', Personnalités: '#d05e58', Razeball: '#4d82cf',
 }[section] || '#c8a755');
+const houseAssetSlug = (title: string) => {
+  const slug = title.toLowerCase();
+  return ['aerwyn', 'brumval', 'falcon', 'venatrix'].includes(slug) ? slug : null;
+};
+const houseAsset = (title: string, kind: 'insigne' | 'maison') => {
+  const slug = houseAssetSlug(title);
+  return slug ? `${import.meta.env.BASE_URL}houses/${kind}-${slug}.webp` : null;
+};
 const ruleAccent = (section: string) => ({
   Général: '#c4a34e', 'Lexique RP': '#4d8bcf', RolePlay: '#42a270', 'RPK On': '#d35d52',
   Famille: '#a875c2', Vocal: '#d17d45', Staff: '#6d7f95',
@@ -2104,7 +2112,8 @@ function LoreView({ query }: { query: string }) {
                 style={{ '--house': h.accent } as React.CSSProperties}
                 key={h.title}
               >
-                <i />
+                <img className="house-card-scene" src={houseAsset(h.title, 'maison') || ''} alt="" aria-hidden="true" />
+                <img className="house-card-crest" src={houseAsset(h.title, 'insigne') || ''} alt={`Blason de la maison ${h.title}`} />
                 <small>{h.subtitle}</small>
                 <h2>{h.title}</h2>
                 <p>{h.text}</p>
@@ -2121,6 +2130,7 @@ function LoreView({ query }: { query: string }) {
       >
         {visible.map((x) => (
           <article className="lore-entry-card" role="button" tabIndex={0} onClick={() => setSelectedLore(x)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedLore(x); } }} style={{ '--entry-accent': loreAccent(x.section) } as React.CSSProperties} key={x.section + x.title}>
+            {x.section === 'Maisons' && <img className="lore-house-crest" src={houseAsset(x.title, 'insigne') || ''} alt={`Blason de la maison ${x.title}`} />}
             <div className="lore-meta">
               <span>{x.section}</span>
               {x.year && <b>{x.year}</b>}
@@ -2132,7 +2142,7 @@ function LoreView({ query }: { query: string }) {
           </article>
         ))}
       </div>
-      {selectedLore && <div className="overlay lore-reader-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedLore(null)}><article className="lore-reader" role="dialog" aria-modal="true" aria-label={selectedLore.title}><button className="close" onClick={() => setSelectedLore(null)} aria-label="Fermer"><X /></button><header style={{ '--entry-accent': loreAccent(selectedLore.section) } as React.CSSProperties}><small>{selectedLore.section}</small>{selectedLore.year && <time>{selectedLore.year}</time>}<h2>{selectedLore.title}</h2>{selectedLore.subtitle && <h3>{selectedLore.subtitle}</h3>}</header><div className="lore-reader-text">{selectedLore.text.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div><footer><BookOpen /> Article complet des archives d’Elderwood</footer></article></div>}
+      {selectedLore && <div className="overlay lore-reader-overlay" onMouseDown={(event) => event.target === event.currentTarget && setSelectedLore(null)}><article className={`lore-reader${selectedLore.section === 'Maisons' ? ' house-reader' : ''}`} role="dialog" aria-modal="true" aria-label={selectedLore.title}><button className="close" onClick={() => setSelectedLore(null)} aria-label="Fermer"><X /></button>{selectedLore.section === 'Maisons' && <div className="house-reader-visual"><img className="house-reader-scene" src={houseAsset(selectedLore.title, 'maison') || ''} alt={`Salle de la maison ${selectedLore.title}`} /><img className="house-reader-crest" src={houseAsset(selectedLore.title, 'insigne') || ''} alt={`Blason de la maison ${selectedLore.title}`} /></div>}<header style={{ '--entry-accent': selectedLore.accent || loreAccent(selectedLore.section) } as React.CSSProperties}><small>{selectedLore.section}</small>{selectedLore.year && <time>{selectedLore.year}</time>}<h2>{selectedLore.title}</h2>{selectedLore.subtitle && <h3>{selectedLore.subtitle}</h3>}</header><div className="lore-reader-text">{selectedLore.text.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div><footer><BookOpen /> Article complet des archives d’Elderwood</footer></article></div>}
     </section>
   );
 }
