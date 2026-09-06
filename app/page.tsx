@@ -1162,7 +1162,9 @@ export default function Home() {
                       ? `Recherche « ${q} »`
                       : section === 'Toutes'
                         ? 'Toutes les notes'
-                        : section + 's'}
+                        : section === 'Lieu'
+                          ? 'Lieux'
+                          : section + 's'}
                   </h2>
                 </div>
                 <span>
