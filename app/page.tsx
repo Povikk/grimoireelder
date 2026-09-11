@@ -353,6 +353,7 @@ export default function Home() {
     [wikiAdmin, setWikiAdmin] = useState(false);
   const [wikiDemoPending, setWikiDemoPending] = useState(true);
   const [visibleNoteLimit, setVisibleNoteLimit] = useState(10);
+  const [navFlyout, setNavFlyout] = useState<'sheets' | 'organize' | null>(null);
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
@@ -771,40 +772,26 @@ export default function Home() {
           <ChevronRight />
         </button>
         {currentUser && <p>MON GRIMOIRE</p>}
-        {currentUser && [
-          ['Toutes', LayoutDashboard],
-          ['Personnage', Users],
-          ['Lieu', MapPin],
-          ['Connaissance', BookOpen],
-          ['Projet', BriefcaseBusiness],
-          ['Sort', WandSparkles],
-        ].map(([s, I]: any) => (
-          <button
-            className={section === s ? 'active' : ''}
-            onClick={() => {
-              setSection(s);
-              setMenu(false);
-              setQ('');
-            }}
-            key={s}
-          >
-            <I />
-            {s === 'Toutes' ? 'Vue d’ensemble' : s + (s === 'Lieu' ? 'x' : 's')}
-            <em>
-              {s === 'Toutes'
-                ? notes.length
-                : notes.filter((n) => n.kind === s).length}
-            </em>
-          </button>
-        ))}
-        {currentUser && <button className={section === 'Cours' ? 'active' : ''} onClick={() => { setSection('Cours'); setMenu(false); setQ(''); }}>
-          <GraduationCap /> Cours<em>{notes.filter((note) => note.kind === 'Cours').length}</em>
-        </button>}
-        {currentUser && <button className={section === 'Tableau' ? 'active' : ''} onClick={() => { setSection('Tableau'); setMenu(false); setQ(''); }}>
-          <StickyNote /> Notes diverses<em>{notes.filter((note) => note.kind === 'Note libre').length}</em>
-        </button>}
-        {currentUser && <button className={section === 'Chronologie' ? 'active' : ''} onClick={() => { setSection('Chronologie'); setMenu(false); setQ(''); }}><CalendarDays /> Chronologie</button>}
-        {currentUser && <button className={section === 'Relations' ? 'active' : ''} onClick={() => { setSection('Relations'); setMenu(false); setQ(''); }}><Network /> Relations</button>}
+        {currentUser && <button className={section === 'Toutes' ? 'active' : ''} onClick={() => { setSection('Toutes'); setMenu(false); setQ(''); setNavFlyout(null); }}><LayoutDashboard /> Vue d’ensemble<em>{notes.length}</em></button>}
+        {currentUser && <div className={`side-nav-group${['Personnage', 'Lieu', 'Connaissance', 'Projet', 'Sort', 'Tableau'].includes(section) ? ' current' : ''}${navFlyout === 'sheets' ? ' open' : ''}`} onMouseEnter={() => setNavFlyout('sheets')} onMouseLeave={() => setNavFlyout(null)}>
+          <button className="side-group-trigger" aria-expanded={navFlyout === 'sheets'} onClick={() => setNavFlyout((value) => value === 'sheets' ? null : 'sheets')}><BookOpen /><span><b>Mes fiches</b><small>{section === 'Tableau' ? 'Notes diverses' : ['Personnage', 'Lieu', 'Connaissance', 'Projet', 'Sort'].includes(section) ? section + (section === 'Lieu' ? 'x' : 's') : '6 rubriques'}</small></span><ChevronRight /></button>
+          {navFlyout === 'sheets' && <nav className="side-nav-flyout"><small>MES FICHES</small>{([
+            ['Personnage', 'Personnages', Users],
+            ['Lieu', 'Lieux', MapPin],
+            ['Connaissance', 'Connaissances', BookOpen],
+            ['Projet', 'Projets', BriefcaseBusiness],
+            ['Sort', 'Sorts', WandSparkles],
+            ['Tableau', 'Notes diverses', StickyNote],
+          ] as const).map(([target, label, Icon]) => <button className={section === target ? 'active' : ''} onClick={() => { setSection(String(target)); setMenu(false); setQ(''); setNavFlyout(null); }} key={target}><Icon /><span><b>{label}</b><small>{target === 'Tableau' ? notes.filter((note) => note.kind === 'Note libre').length : notes.filter((note) => note.kind === target).length} fiche{(target === 'Tableau' ? notes.filter((note) => note.kind === 'Note libre').length : notes.filter((note) => note.kind === target).length) !== 1 ? 's' : ''}</small></span><ChevronRight /></button>)}</nav>}
+        </div>}
+        {currentUser && <div className={`side-nav-group${['Cours', 'Chronologie', 'Relations'].includes(section) ? ' current' : ''}${navFlyout === 'organize' ? ' open' : ''}`} onMouseEnter={() => setNavFlyout('organize')} onMouseLeave={() => setNavFlyout(null)}>
+          <button className="side-group-trigger" aria-expanded={navFlyout === 'organize'} onClick={() => setNavFlyout((value) => value === 'organize' ? null : 'organize')}><CalendarDays /><span><b>Organisation</b><small>{['Cours', 'Chronologie', 'Relations'].includes(section) ? section : '3 rubriques'}</small></span><ChevronRight /></button>
+          {navFlyout === 'organize' && <nav className="side-nav-flyout"><small>ORGANISATION</small>{([
+            ['Cours', 'Cours', GraduationCap, notes.filter((note) => note.kind === 'Cours').length],
+            ['Chronologie', 'Chronologie', CalendarDays, notes.filter((note) => note.eventDate).length],
+            ['Relations', 'Relations', Network, notes.filter((note) => note.kind === 'Personnage').length],
+          ] as const).map(([target, label, Icon, count]) => <button className={section === target ? 'active' : ''} onClick={() => { setSection(target); setMenu(false); setQ(''); setNavFlyout(null); }} key={target}><Icon /><span><b>{label}</b><small>{count} élément{count !== 1 ? 's' : ''}</small></span><ChevronRight /></button>)}</nav>}
+        </div>}
         <p className="archive-label">ARCHIVES OFFICIELLES</p>
         {!currentUser && <button className={section === 'Accueil' ? 'active' : ''} onClick={() => { setSection('Accueil'); setMenu(false); setQ(''); }}>
           <Sparkles /> Accueil
