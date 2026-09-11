@@ -13,6 +13,7 @@ import {
   Dices,
   ImagePlus,
   Eye,
+  GraduationCap,
   LayoutDashboard,
   List,
   LibraryBig,
@@ -30,6 +31,7 @@ import {
   Search,
   ShieldAlert,
   Send,
+  Share2,
   Check,
   Sparkles,
   SpellCheck2,
@@ -57,7 +59,7 @@ import {
   type AdminUser,
   type WikiSubmission,
 } from '@/lib/supabase';
-type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort' | 'Note libre';
+type Kind = 'Personnage' | 'Lieu' | 'Connaissance' | 'Projet' | 'Sort' | 'Cours' | 'Note libre';
 type CharacterHouse = 'Aerwyn' | 'Brumval' | 'Falcon' | 'Venatrix';
 type SchoolYear = 'Première année' | 'Deuxième année' | 'Troisième année' | 'Quatrième année' | 'Cinquième année' | 'Sixième année' | 'Septième année' | 'Personnel' | 'Hors cursus';
 const schoolYears: SchoolYear[] = ['Première année', 'Deuxième année', 'Troisième année', 'Quatrième année', 'Cinquième année', 'Sixième année', 'Septième année', 'Personnel', 'Hors cursus'];
@@ -102,6 +104,9 @@ type Note = {
   incantation?: string;
   spellDomain?: 'Charme' | 'Défense' | 'Soin' | 'Altération' | 'Élémentaire' | 'Utilitaire' | 'Interdit' | 'Autre';
   mastery?: 'À étudier' | 'En apprentissage' | 'Instable' | 'Maîtrisé';
+  courseTeacher?: string;
+  courseRoom?: string;
+  courseSessions?: { id: string; title: string; date: string; content: string }[];
   boardX?: number;
   boardY?: number;
   boardWidth?: number;
@@ -158,6 +163,26 @@ const corvinCharacter: Note = {
     ['Anecdotes', "Il fait parfois pile ou face pour des décisions inutiles, préfère apprendre les règles en jouant, ajoute volontiers une règle à un jeu qui fonctionnait déjà et s’ennuie davantage d’une partie prévisible que d’une défaite."],
   ],
 };
+const demoCourse: Note = {
+  id: 'course-demo',
+  kind: 'Cours',
+  title: 'Initiation à la Runomancie',
+  sub: 'Première année · Salle des runes',
+  text: 'Un fil de démonstration pour organiser tes notes séance après séance.',
+  tags: ['Runomancie', 'Première année'],
+  status: 'En cours',
+  schoolYear: 'Première année',
+  courseTeacher: 'Professeur à renseigner',
+  courseRoom: 'Salle des runes',
+  courseSessions: [
+    {
+      id: 'course-demo-session',
+      title: 'Les fréquences runiques',
+      date: new Date().toISOString().slice(0, 10),
+      content: '<p>Introduction aux runes et à leur relation avec l’Écho. Une rune ne représente pas seulement une lettre : elle retranscrit une fréquence magique.</p><h3>À retenir</h3><ul><li>Observer avant de tracer.</li><li>Stabiliser le Flux avant de fermer la rune.</li></ul>',
+    },
+  ],
+};
 const details = [
   [
     'Identité',
@@ -190,6 +215,7 @@ const icons = {
   Connaissance: BookOpen,
   Projet: BriefcaseBusiness,
   Sort: WandSparkles,
+  Cours: GraduationCap,
   'Note libre': StickyNote,
 };
 const statusesByKind: Record<Kind, string[]> = {
@@ -198,6 +224,7 @@ const statusesByKind: Record<Kind, string[]> = {
   Connaissance: ['À classer', 'En cours d’étude', 'Documentée', 'À compléter', 'Archivée'],
   Projet: ['Idée', 'À préparer', 'En cours', 'En attente', 'Terminé', 'Abandonné'],
   Sort: ['À découvrir', 'À apprendre', 'En entraînement', 'Maîtrisé', 'Interdit'],
+  Cours: ['À venir', 'En cours', 'À réviser', 'Terminé'],
   'Note libre': ['Brouillon'],
 };
 
@@ -389,11 +416,11 @@ export default function Home() {
         if (!active) return;
         if (remote.length) {
           const shouldRestoreCorvin = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com';
-          let restored = remote.map((note) => {
+          let restored: Note[] = remote.map((note): Note => {
             if (!shouldRestoreCorvin || note.id !== 'joueur')
               return note;
             if (note.title === 'Corvin Wrenfall')
-              return note.schoolYear ? note : { ...note, schoolYear: 'Première année' };
+              return note.schoolYear ? note : { ...note, schoolYear: 'Première année' as SchoolYear };
             return {
               ...corvinCharacter,
               image: note.image,
@@ -402,12 +429,15 @@ export default function Home() {
           });
           if (shouldRestoreCorvin && !restored.some((note) => note.id === 'joueur'))
             restored = [corvinCharacter, ...restored];
+          const courseDemoKey = `elderwood-course-demo-${currentUser.id}`;
+          if (shouldRestoreCorvin && !restored.some((note) => note.kind === 'Cours') && localStorage.getItem(courseDemoKey) !== 'deleted')
+            restored = [...restored, demoCourse];
           if (restored.length !== remote.length || restored.some((note, index) => note !== remote[index]))
             await replacePrivateNotes(currentUser, restored);
           setNotes(restored);
         } else {
           const starter = currentUser.email?.toLowerCase() === 'jonathan.ragot@gmail.com'
-            ? [corvinCharacter]
+            ? [corvinCharacter, demoCourse]
             : initial;
           await replacePrivateNotes(currentUser, starter);
           if (!active) return;
@@ -552,13 +582,13 @@ export default function Home() {
         source: 'Fiche' as const,
         section: item.kind,
         title: item.title,
-        excerpt: richPlainText(item.text) || item.sub,
+        excerpt: item.kind === 'Cours' ? `${item.courseSessions?.length || 0} séance${(item.courseSessions?.length || 0) !== 1 ? 's' : ''} · ${item.courseTeacher || item.sub}` : richPlainText(item.text) || item.sub,
         tags: item.tags,
         item,
         score: searchScore(
           q,
           item.title,
-          [item.sub, item.text, item.schoolYear, item.incantation, item.spellDomain, item.mastery, ...item.tags].join(' '),
+          [item.sub, item.text, item.schoolYear, item.incantation, item.spellDomain, item.mastery, item.courseTeacher, item.courseRoom, ...(item.courseSessions || []).flatMap((session) => [session.title, richPlainText(session.content)]), ...item.tags].join(' '),
         ),
       })),
       ...lore.map((item) => ({
@@ -612,7 +642,7 @@ export default function Home() {
       globalResults.filter(
         (result) =>
           (searchSource === 'Tout' || result.source === searchSource) &&
-          (searchTag === 'Tous' || result.tags.includes(searchTag)),
+          (searchTag === 'Tous' || result.tags.some((tag) => tag === searchTag)),
       ),
     [globalResults, searchSource, searchTag],
   );
@@ -756,6 +786,9 @@ export default function Home() {
             </em>
           </button>
         ))}
+        {currentUser && <button className={section === 'Cours' ? 'active' : ''} onClick={() => { setSection('Cours'); setMenu(false); setQ(''); }}>
+          <GraduationCap /> Cours<em>{notes.filter((note) => note.kind === 'Cours').length}</em>
+        </button>}
         {currentUser && <button className={section === 'Tableau' ? 'active' : ''} onClick={() => { setSection('Tableau'); setMenu(false); setQ(''); }}>
           <StickyNote /> Notes diverses<em>{notes.filter((note) => note.kind === 'Note libre').length}</em>
         </button>}
@@ -879,7 +912,7 @@ export default function Home() {
               </>
             )}
           </div>
-          {currentUser && !['Règlement', 'Lore', 'Elderwood'].includes(section) && (
+          {currentUser && !['Règlement', 'Lore', 'Elderwood', 'Cours'].includes(section) && (
             <button className="primary" onClick={section === 'Tableau' ? addLooseNote : add}>
               <Plus /> {section === 'Tableau' ? 'Nouvelle note' : 'Nouvelle fiche'}
             </button>
@@ -960,7 +993,13 @@ export default function Home() {
                     key={`${result.source}-${result.section}-${result.title}-${index}`}
                     onClick={() => {
                       if (result.source === 'Fiche') {
-                        setOpen(result.item as Note);
+                        const foundNote = result.item as Note;
+                        if (foundNote.kind === 'Cours') {
+                          setSection('Cours');
+                          setQ('');
+                        } else {
+                          setOpen(foundNote);
+                        }
                         return;
                       }
                       setSearchOpen(result);
@@ -1006,6 +1045,8 @@ export default function Home() {
             <LoreView query={q} />
           ) : section === 'Elderwood' ? (
             <ElderwoodView query={q} />
+          ) : section === 'Cours' ? (
+            <CourseView user={currentUser!} courses={notes.filter((note) => note.kind === 'Cours')} entries={wikiEntries} update={(course) => setNotes((current) => current.map((note) => note.id === course.id ? course : note))} add={(course) => setNotes((current) => [course, ...current])} remove={(course) => { if (course.id === 'course-demo') localStorage.setItem(`elderwood-course-demo-${currentUser!.id}`, 'deleted'); setNotes((current) => current.filter((note) => note.id !== course.id)); }} refreshShared={async () => setWikiEntries(await loadWikiSubmissions(currentUser))} />
           ) : section === 'Tableau' ? (
             <MagicBoard notes={notes.filter((note) => note.kind === 'Note libre')} update={(updated) => setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))} remove={(id) => setNotes((current) => current.filter((note) => note.id !== id))} add={addLooseNote} />
           ) : section === 'Chronologie' ? (
@@ -1576,7 +1617,7 @@ function WikiPanel({ user, admin, entries, seed, demoPending, setDemoPending, cl
   const [publicConsent, setPublicConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const visible = admin ? entries : entries.filter((entry) => entry.created_by === user.id);
+  const visible = (admin ? entries : entries.filter((entry) => entry.created_by === user.id)).map((entry) => entry.section.startsWith('Cours ·') ? { ...entry, category: 'Cours' as WikiSubmission['category'] } : entry);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage('');
     try {
@@ -1624,6 +1665,54 @@ const sheetTemplates: { kind: Kind; title: string; sub: string; tags: string[]; 
 ];
 function TemplatePicker({ close, choose }: { close: () => void; choose: (template: typeof sheetTemplates[number]) => void }) {
   return <div className="overlay template-overlay"><section className="template-picker"><button className="close" onClick={close}><X /></button><small>UNE PAGE ADAPTÉE À TON IDÉE</small><h2>Que veux-tu inscrire&nbsp;?</h2><p>Le modèle prépare les catégories utiles. Tout reste modifiable ensuite.</p><div>{sheetTemplates.map((template) => { const Icon = icons[template.kind]; return <button onClick={() => choose(template)} key={template.title}><i><Icon /></i><span><b>{template.title}</b><small>{template.sub}</small></span><ChevronRight /></button>; })}</div></section></div>;
+}
+function CourseView({ user, courses, entries, update, add, remove, refreshShared }: { user: User; courses: Note[]; entries: WikiSubmission[]; update: (course: Note) => void; add: (course: Note) => void; remove: (course: Note) => void; refreshShared: () => Promise<void> }) {
+  const [tab, setTab] = useState<'mine' | 'shared'>('mine');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sharedOpen, setSharedOpen] = useState<WikiSubmission | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [courseTitle, setCourseTitle] = useState('');
+  const [teacher, setTeacher] = useState('');
+  const [room, setRoom] = useState('');
+  const [year, setYear] = useState<SchoolYear>('Première année');
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [sessionContent, setSessionContent] = useState('');
+  const [sharing, setSharing] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const selected = courses.find((course) => course.id === selectedId) || null;
+  const shared = entries.filter((entry) => entry.status === 'approved' && entry.section.startsWith('Cours ·'));
+  const proposals = entries.filter((entry) => entry.created_by === user.id && entry.section.startsWith('Cours ·'));
+  const createCourse = () => {
+    if (courseTitle.trim().length < 2) return;
+    const course: Note = { id: crypto.randomUUID(), kind: 'Cours', title: courseTitle.trim(), sub: [year, room.trim()].filter(Boolean).join(' · '), text: 'Fil personnel de notes de cours.', tags: [year], status: 'En cours', schoolYear: year, courseTeacher: teacher.trim(), courseRoom: room.trim(), courseSessions: [] };
+    add(course); setSelectedId(course.id); setCreating(false); setCourseTitle(''); setTeacher(''); setRoom('');
+  };
+  const addSession = () => {
+    if (!selected || sessionTitle.trim().length < 2 || richPlainText(sessionContent).trim().length < 3) return;
+    update({ ...selected, courseSessions: [...(selected.courseSessions || []), { id: crypto.randomUUID(), title: sessionTitle.trim(), date: sessionDate, content: sessionContent }] });
+    setSessionTitle(''); setSessionContent(''); setSessionDate(new Date().toISOString().slice(0, 10)); setMessage('La séance a été ajoutée au fil.');
+  };
+  const shareSession = async (course: Note, session: NonNullable<Note['courseSessions']>[number]) => {
+    setSharing(session.id); setMessage('Envoi à la modération…');
+    try {
+      await submitWikiProposal(user, { category: 'Lore', section: `Cours · ${course.title}`, title: session.title, subtitle: [course.schoolYear, course.courseTeacher].filter(Boolean).join(' · '), content: richPlainText(session.content), source: [`Séance du ${session.date ? new Intl.DateTimeFormat('fr-FR').format(new Date(`${session.date}T12:00:00`)) : 'date inconnue'}`, course.courseRoom].filter(Boolean).join(' · ') });
+      await refreshShared(); setMessage('Le cours a été envoyé. Il apparaîtra dans la bibliothèque après validation.');
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible de partager ce cours.'); }
+    finally { setSharing(null); }
+  };
+  return <section className="courses-page">
+    <header className="courses-hero"><div><small>CARNET SCOLAIRE PERSONNEL</small><h1>Cours</h1><p>Un fil privé par matière, une entrée pour chaque séance.</p></div><button onClick={() => { setCreating(true); setSelectedId(null); setTab('mine'); }}><Plus /> Nouveau cours</button></header>
+    <nav className="course-tabs"><button className={tab === 'mine' ? 'active' : ''} onClick={() => { setTab('mine'); setSharedOpen(null); }}><GraduationCap /> Mes cours <span>{courses.length}</span></button><button className={tab === 'shared' ? 'active' : ''} onClick={() => { setTab('shared'); setSelectedId(null); }}><BookOpen /> Cours partagés <span>{shared.length}</span></button></nav>
+    {message && <p className="course-message"><Sparkles /> {message}<button onClick={() => setMessage('')} aria-label="Fermer"><X /></button></p>}
+    {creating && <section className="course-create"><div><small>NOUVEAU FIL</small><h2>Créer une matière</h2></div><label>Nom du cours<input value={courseTitle} onChange={(event) => setCourseTitle(event.target.value)} placeholder="Ex. Potions" autoFocus /></label><div><label>Enseignant ou enseignante<input value={teacher} onChange={(event) => setTeacher(event.target.value)} placeholder="Facultatif" /></label><label>Salle<input value={room} onChange={(event) => setRoom(event.target.value)} placeholder="Facultatif" /></label><label>Année<select value={year} onChange={(event) => setYear(event.target.value as SchoolYear)}>{schoolYears.slice(0, 7).map((item) => <option key={item}>{item}</option>)}</select></label></div><footer><button onClick={() => setCreating(false)}>Annuler</button><button className="primary" disabled={courseTitle.trim().length < 2} onClick={createCourse}><Plus /> Créer le fil</button></footer></section>}
+    {tab === 'mine' && !selected && !creating && <div className="course-thread-list">{courses.map((course) => <article key={course.id} onClick={() => setSelectedId(course.id)}><i><GraduationCap /></i><div><small>{course.schoolYear || 'Année non renseignée'}</small><h2>{course.title}</h2><p>{[course.courseTeacher, course.courseRoom].filter(Boolean).join(' · ') || 'Informations à compléter'}</p></div><span><b>{course.courseSessions?.length || 0}</b> séance{(course.courseSessions?.length || 0) !== 1 && 's'}</span><ChevronRight /></article>)}</div>}
+    {tab === 'mine' && !selected && !creating && !courses.length && <div className="course-empty"><GraduationCap /><h2>Ton premier cahier attend</h2><p>Crée une matière pour commencer à noter tes séances.</p><button onClick={() => setCreating(true)}><Plus /> Créer un cours</button></div>}
+    {selected && <section className="course-thread"><header><button onClick={() => setSelectedId(null)}>← Tous mes cours</button><div><small>{selected.schoolYear}</small><h2>{selected.title}</h2><p>{[selected.courseTeacher, selected.courseRoom].filter(Boolean).join(' · ')}</p></div><button className="course-delete" onClick={() => { if (confirm(`Supprimer le cours « ${selected.title} » et toutes ses séances ?`)) { remove(selected); setSelectedId(null); } }}><Trash2 /> Supprimer</button></header><details className="course-settings"><summary><Pencil /> Modifier les informations du cours</summary><div><label>Nom<input value={selected.title} onChange={(event) => update({ ...selected, title: event.target.value })} /></label><label>Enseignant ou enseignante<input value={selected.courseTeacher || ''} onChange={(event) => update({ ...selected, courseTeacher: event.target.value })} /></label><label>Salle<input value={selected.courseRoom || ''} onChange={(event) => update({ ...selected, courseRoom: event.target.value })} /></label><label>Année<select value={selected.schoolYear || 'Première année'} onChange={(event) => update({ ...selected, schoolYear: event.target.value as SchoolYear })}>{schoolYears.slice(0, 7).map((item) => <option key={item}>{item}</option>)}</select></label></div></details><div className="course-posts">{[...(selected.courseSessions || [])].reverse().map((session, index) => { const proposal = proposals.find((entry) => entry.title === session.title && entry.section === `Cours · ${selected.title}`); return <article key={session.id}><aside><span>{(selected.courseSessions?.length || 0) - index}</span><i /></aside><div><header><div><small>{session.date ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(`${session.date}T12:00:00`)) : 'Sans date'}</small><h3>{session.title}</h3></div>{proposal && <em className={`course-share-status ${proposal.status}`}>{proposal.status === 'pending' ? 'En validation' : proposal.status === 'approved' ? 'Publié' : 'Refusé'}</em>}</header><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(session.content) }} /><footer><button disabled={sharing === session.id || proposal?.status === 'pending'} onClick={() => shareSession(selected, session)}><Share2 /> {proposal?.status === 'approved' ? 'Partager une nouvelle version' : proposal?.status === 'pending' ? 'En attente de validation' : 'Partager ce cours'}</button><button onClick={() => { if (confirm('Supprimer cette séance ?')) update({ ...selected, courseSessions: selected.courseSessions?.filter((item) => item.id !== session.id) }); }}><Trash2 /> Supprimer</button></footer></div></article>; })}{!selected.courseSessions?.length && <p className="course-no-post">Aucune séance dans ce fil pour le moment.</p>}</div><section className="course-compose"><small>NOUVELLE SÉANCE</small><h3>Ajouter une note au fil</h3><div><label>Titre<input value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} placeholder="Sujet de la séance" /></label><label>Date<input type="date" value={sessionDate} onChange={(event) => setSessionDate(event.target.value)} /></label></div><CorrectableRichEditor value={sessionContent} onChange={setSessionContent} placeholder="Écris tes notes de cours…" /><button disabled={sessionTitle.trim().length < 2 || richPlainText(sessionContent).trim().length < 3} onClick={addSession}><Plus /> Ajouter au fil</button></section></section>}
+    {tab === 'shared' && !sharedOpen && <div className="shared-course-library">{shared.map((entry) => <article key={entry.id} onClick={() => setSharedOpen(entry)}><i><BookOpen /></i><small>{entry.section.replace('Cours · ', '')}</small><h2>{entry.title}</h2>{entry.subtitle && <p>{entry.subtitle}</p>}<span>Lire le cours <ChevronRight /></span></article>)}</div>}
+    {tab === 'shared' && !sharedOpen && !shared.length && <div className="course-empty"><BookOpen /><h2>La bibliothèque attend ses premiers cours</h2><p>Les séances validées par la modération apparaîtront ici.</p></div>}
+    {sharedOpen && <article className="shared-course-reader"><button onClick={() => setSharedOpen(null)}>← Bibliothèque des cours</button><small>{sharedOpen.section.replace('Cours · ', '')}</small><h2>{sharedOpen.title}</h2>{sharedOpen.subtitle && <h3>{sharedOpen.subtitle}</h3>}<div className="rich-output">{sharedOpen.content}</div>{sharedOpen.source && <footer>{sharedOpen.source}</footer>}</article>}
+  </section>;
 }
 function TimelineView({ notes, open, edit }: { notes: Note[]; open: (note: Note) => void; edit: (note: Note) => void }) {
   const dated = [...notes].filter((note) => note.eventDate).sort((a,b) => String(b.eventDate).localeCompare(String(a.eventDate)));
@@ -2634,7 +2723,7 @@ function Editor({
       .map((match, index) => ({ match, index }))
       .filter(({ index }) => acceptedCorrections.has(index))
       .sort((a, b) => b.match.offset - a.match.offset)
-      .forEach(({ match }) => {
+      .forEach(({ match, index }) => {
         const replacementIndex = selectedReplacements[index] || 0;
         corrected = corrected.slice(0, match.offset) + match.replacements[replacementIndex].value + corrected.slice(match.offset + match.length);
       });
