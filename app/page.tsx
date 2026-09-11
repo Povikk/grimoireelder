@@ -21,6 +21,7 @@ import {
   LockKeyhole,
   LogIn,
   MapPin,
+  MoreHorizontal,
   Network,
   Rows3,
   StickyNote,
@@ -29,6 +30,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Settings,
   ShieldAlert,
   Send,
   Share2,
@@ -1046,7 +1048,7 @@ export default function Home() {
           ) : section === 'Elderwood' ? (
             <ElderwoodView query={q} />
           ) : section === 'Cours' ? (
-            <CourseView user={currentUser!} courses={notes.filter((note) => note.kind === 'Cours')} entries={wikiEntries} update={(course) => setNotes((current) => current.map((note) => note.id === course.id ? course : note))} add={(course) => setNotes((current) => [course, ...current])} remove={(course) => { if (course.id === 'course-demo') localStorage.setItem(`elderwood-course-demo-${currentUser!.id}`, 'deleted'); setNotes((current) => current.filter((note) => note.id !== course.id)); }} refreshShared={async () => setWikiEntries(await loadWikiSubmissions(currentUser))} />
+            <CourseNotebookView user={currentUser!} courses={notes.filter((note) => note.kind === 'Cours')} entries={wikiEntries} update={(course) => setNotes((current) => current.map((note) => note.id === course.id ? course : note))} add={(course) => setNotes((current) => [course, ...current])} remove={(course) => { if (course.id === 'course-demo') localStorage.setItem(`elderwood-course-demo-${currentUser!.id}`, 'deleted'); setNotes((current) => current.filter((note) => note.id !== course.id)); }} refreshShared={async () => setWikiEntries(await loadWikiSubmissions(currentUser))} />
           ) : section === 'Tableau' ? (
             <MagicBoard notes={notes.filter((note) => note.kind === 'Note libre')} update={(updated) => setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))} remove={(id) => setNotes((current) => current.filter((note) => note.id !== id))} add={addLooseNote} />
           ) : section === 'Chronologie' ? (
@@ -1666,7 +1668,7 @@ const sheetTemplates: { kind: Kind; title: string; sub: string; tags: string[]; 
 function TemplatePicker({ close, choose }: { close: () => void; choose: (template: typeof sheetTemplates[number]) => void }) {
   return <div className="overlay template-overlay"><section className="template-picker"><button className="close" onClick={close}><X /></button><small>UNE PAGE ADAPTÉE À TON IDÉE</small><h2>Que veux-tu inscrire&nbsp;?</h2><p>Le modèle prépare les catégories utiles. Tout reste modifiable ensuite.</p><div>{sheetTemplates.map((template) => { const Icon = icons[template.kind]; return <button onClick={() => choose(template)} key={template.title}><i><Icon /></i><span><b>{template.title}</b><small>{template.sub}</small></span><ChevronRight /></button>; })}</div></section></div>;
 }
-function CourseView({ user, courses, entries, update, add, remove, refreshShared }: { user: User; courses: Note[]; entries: WikiSubmission[]; update: (course: Note) => void; add: (course: Note) => void; remove: (course: Note) => void; refreshShared: () => Promise<void> }) {
+function LegacyCourseView({ user, courses, entries, update, add, remove, refreshShared }: { user: User; courses: Note[]; entries: WikiSubmission[]; update: (course: Note) => void; add: (course: Note) => void; remove: (course: Note) => void; refreshShared: () => Promise<void> }) {
   const [tab, setTab] = useState<'mine' | 'shared'>('mine');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sharedOpen, setSharedOpen] = useState<WikiSubmission | null>(null);
@@ -1712,6 +1714,82 @@ function CourseView({ user, courses, entries, update, add, remove, refreshShared
     {tab === 'shared' && !sharedOpen && <div className="shared-course-library">{shared.map((entry) => <article key={entry.id} onClick={() => setSharedOpen(entry)}><i><BookOpen /></i><small>{entry.section.replace('Cours · ', '')}</small><h2>{entry.title}</h2>{entry.subtitle && <p>{entry.subtitle}</p>}<span>Lire le cours <ChevronRight /></span></article>)}</div>}
     {tab === 'shared' && !sharedOpen && !shared.length && <div className="course-empty"><BookOpen /><h2>La bibliothèque attend ses premiers cours</h2><p>Les séances validées par la modération apparaîtront ici.</p></div>}
     {sharedOpen && <article className="shared-course-reader"><button onClick={() => setSharedOpen(null)}>← Bibliothèque des cours</button><small>{sharedOpen.section.replace('Cours · ', '')}</small><h2>{sharedOpen.title}</h2>{sharedOpen.subtitle && <h3>{sharedOpen.subtitle}</h3>}<div className="rich-output">{sharedOpen.content}</div>{sharedOpen.source && <footer>{sharedOpen.source}</footer>}</article>}
+  </section>;
+}
+function CourseNotebookView({ user, courses, entries, update, add, remove, refreshShared }: { user: User; courses: Note[]; entries: WikiSubmission[]; update: (course: Note) => void; add: (course: Note) => void; remove: (course: Note) => void; refreshShared: () => Promise<void> }) {
+  type Session = NonNullable<Note['courseSessions']>[number];
+  const [tab, setTab] = useState<'mine' | 'shared'>('mine');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftDate, setDraftDate] = useState(new Date().toISOString().slice(0, 10));
+  const [draftContent, setDraftContent] = useState('');
+  const [actionsOpen, setActionsOpen] = useState<string | null>(null);
+  const [sharedOpen, setSharedOpen] = useState<WikiSubmission | null>(null);
+  const [message, setMessage] = useState('');
+  const [sharing, setSharing] = useState<string | null>(null);
+  const [newCourse, setNewCourse] = useState({ title: '', teacher: '', room: '', year: 'Première année' as SchoolYear });
+  const selected = courses.find((course) => course.id === selectedId) || null;
+  const shared = entries.filter((entry) => entry.status === 'approved' && entry.section.startsWith('Cours ·'));
+  const proposals = entries.filter((entry) => entry.created_by === user.id && entry.section.startsWith('Cours ·'));
+  useEffect(() => {
+    if (tab === 'mine' && !selectedId && courses.length) setSelectedId(courses[0].id);
+    if (selectedId && !courses.some((course) => course.id === selectedId)) setSelectedId(courses[0]?.id || null);
+  }, [courses, selectedId, tab]);
+  const openComposer = (session?: Session) => {
+    setDraftId(session?.id || null);
+    setDraftTitle(session?.title || '');
+    setDraftDate(session?.date || new Date().toISOString().slice(0, 10));
+    setDraftContent(session?.content || '');
+    setActionsOpen(null);
+    setComposerOpen(true);
+  };
+  const saveSession = () => {
+    if (!selected || draftTitle.trim().length < 2 || richPlainText(draftContent).trim().length < 3) return;
+    const session: Session = { id: draftId || crypto.randomUUID(), title: draftTitle.trim(), date: draftDate, content: draftContent };
+    const current = selected.courseSessions || [];
+    update({ ...selected, courseSessions: draftId ? current.map((item) => item.id === draftId ? session : item) : [...current, session] });
+    setComposerOpen(false);
+    setMessage(draftId ? 'La séance a été modifiée.' : 'La séance a été ajoutée.');
+  };
+  const createCourse = () => {
+    if (newCourse.title.trim().length < 2) return;
+    const course: Note = { id: crypto.randomUUID(), kind: 'Cours', title: newCourse.title.trim(), sub: [newCourse.year, newCourse.room.trim()].filter(Boolean).join(' · '), text: 'Cahier personnel de cours.', tags: [newCourse.year], status: 'En cours', schoolYear: newCourse.year, courseTeacher: newCourse.teacher.trim(), courseRoom: newCourse.room.trim(), courseSessions: [] };
+    add(course);
+    setSelectedId(course.id);
+    setNewCourse({ title: '', teacher: '', room: '', year: 'Première année' });
+    setCreating(false);
+  };
+  const shareSession = async (course: Note, session: Session) => {
+    if (richPlainText(session.content).trim().length < 20) { setMessage('Cette séance est trop courte pour être proposée au partage.'); return; }
+    setSharing(session.id);
+    setActionsOpen(null);
+    try {
+      await submitWikiProposal(user, { category: 'Lore', section: `Cours · ${course.title}`, title: session.title, subtitle: [course.schoolYear, course.courseTeacher].filter(Boolean).join(' · '), content: richPlainText(session.content), source: [`Séance du ${session.date ? new Intl.DateTimeFormat('fr-FR').format(new Date(`${session.date}T12:00:00`)) : 'date inconnue'}`, course.courseRoom].filter(Boolean).join(' · ') });
+      await refreshShared();
+      setMessage('La séance a été envoyée à la modération.');
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible de partager cette séance.'); }
+    finally { setSharing(null); }
+  };
+  return <section className="course-notebook-page">
+    <header className="notebook-heading"><div><small>CARNET SCOLAIRE PERSONNEL</small><h1>Mes cours</h1><p>Choisis une matière et écris directement dans son fil.</p></div><nav><button className={tab === 'mine' ? 'active' : ''} onClick={() => { setTab('mine'); setSharedOpen(null); }}><GraduationCap /> Mes matières</button><button className={tab === 'shared' ? 'active' : ''} onClick={() => setTab('shared')}><BookOpen /> Bibliothèque <span>{shared.length}</span></button></nav></header>
+    {message && <div className="notebook-toast"><Sparkles />{message}<button onClick={() => setMessage('')}><X /></button></div>}
+    {tab === 'mine' && <div className="notebook-layout">
+      <aside className="subject-rail"><header><b>Matières</b><button onClick={() => setCreating(true)} aria-label="Créer un cours"><Plus /></button></header><div>{courses.map((course) => <button className={selectedId === course.id ? 'active' : ''} onClick={() => { setSelectedId(course.id); setEditingCourse(false); }} key={course.id}><i><GraduationCap /></i><span><b>{course.title}</b><small>{course.courseSessions?.length || 0} séance{(course.courseSessions?.length || 0) !== 1 && 's'}</small></span></button>)}</div>{!courses.length && <p>Aucune matière pour le moment.</p>}</aside>
+      <main className="notebook-thread">{selected ? <>
+        <header className="thread-heading"><div><small>{selected.schoolYear || 'Année non renseignée'}</small><h2>{selected.title}</h2><p>{[selected.courseTeacher, selected.courseRoom].filter(Boolean).join(' · ') || 'Ajoute les informations du cours'}</p></div><button onClick={() => setEditingCourse((value) => !value)} aria-label="Paramètres du cours" title="Paramètres du cours"><Settings /></button></header>
+        {editingCourse && <section className="notebook-settings"><label>Nom<input value={selected.title} onChange={(event) => update({ ...selected, title: event.target.value })} /></label><label>Enseignant ou enseignante<input value={selected.courseTeacher || ''} onChange={(event) => update({ ...selected, courseTeacher: event.target.value })} /></label><label>Salle<input value={selected.courseRoom || ''} onChange={(event) => update({ ...selected, courseRoom: event.target.value })} /></label><label>Année<select value={selected.schoolYear || 'Première année'} onChange={(event) => update({ ...selected, schoolYear: event.target.value as SchoolYear })}>{schoolYears.slice(0, 7).map((item) => <option key={item}>{item}</option>)}</select></label><button className="notebook-delete-course" onClick={() => { if (confirm(`Supprimer le cours « ${selected.title} » et toutes ses séances ?`)) remove(selected); }}><Trash2 /> Supprimer ce cours</button></section>}
+        <div className="notebook-posts">{[...(selected.courseSessions || [])].reverse().map((session) => { const proposal = proposals.find((entry) => entry.title === session.title && entry.section === `Cours · ${selected.title}`); return <article key={session.id}><div className="post-date"><b>{session.date ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit' }).format(new Date(`${session.date}T12:00:00`)) : '•'}</b><small>{session.date ? new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(new Date(`${session.date}T12:00:00`)) : ''}</small></div><div className="post-paper"><header><div><h3>{session.title}</h3><small>{session.date ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(`${session.date}T12:00:00`)) : 'Sans date'}{proposal ? ` · ${proposal.status === 'pending' ? 'En validation' : proposal.status === 'approved' ? 'Publié' : 'Refusé'}` : ''}</small></div><button onClick={() => setActionsOpen(actionsOpen === session.id ? null : session.id)} aria-label="Actions"><MoreHorizontal /></button>{actionsOpen === session.id && <div className="post-menu"><button onClick={() => openComposer(session)}><Pencil /> Modifier</button><button disabled={sharing === session.id || proposal?.status === 'pending'} onClick={() => shareSession(selected, session)}><Share2 /> {proposal?.status === 'pending' ? 'En validation' : 'Partager'}</button><button onClick={() => { if (confirm('Supprimer cette séance ?')) update({ ...selected, courseSessions: selected.courseSessions?.filter((item) => item.id !== session.id) }); setActionsOpen(null); }}><Trash2 /> Supprimer</button></div>}</header><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(session.content) }} /></div></article>; })}{!selected.courseSessions?.length && <div className="thread-empty"><BookOpen /><h3>Ce cahier est encore vide</h3><p>Ajoute la première séance de ce cours.</p></div>}</div>
+        <button className="quick-session" onClick={() => openComposer()}><Plus /> Ajouter une séance</button>
+      </> : <div className="thread-empty"><GraduationCap /><h3>Crée ta première matière</h3><p>Elle apparaîtra ici comme un nouveau cahier.</p><button onClick={() => setCreating(true)}><Plus /> Nouveau cours</button></div>}</main>
+    </div>}
+    {tab === 'shared' && !sharedOpen && <div className="notebook-library">{shared.map((entry) => <button onClick={() => setSharedOpen(entry)} key={entry.id}><i><BookOpen /></i><span><small>{entry.section.replace('Cours · ', '')}</small><b>{entry.title}</b><p>{entry.subtitle}</p></span><ChevronRight /></button>)}{!shared.length && <div className="thread-empty"><BookOpen /><h3>Aucun cours partagé</h3><p>Les séances acceptées par la modération apparaîtront ici.</p></div>}</div>}
+    {tab === 'shared' && sharedOpen && <article className="notebook-shared-reader"><button onClick={() => setSharedOpen(null)}>← Retour à la bibliothèque</button><small>{sharedOpen.section.replace('Cours · ', '')}</small><h2>{sharedOpen.title}</h2>{sharedOpen.subtitle && <h3>{sharedOpen.subtitle}</h3>}<div>{sharedOpen.content}</div>{sharedOpen.source && <footer>{sharedOpen.source}</footer>}</article>}
+    {creating && <div className="overlay notebook-modal" onMouseDown={(event) => event.target === event.currentTarget && setCreating(false)}><section><button className="close" onClick={() => setCreating(false)}><X /></button><small>NOUVEAU CAHIER</small><h2>Créer une matière</h2><label>Nom du cours<input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} autoFocus placeholder="Ex. Potions" /></label><div><label>Enseignant ou enseignante<input value={newCourse.teacher} onChange={(event) => setNewCourse({ ...newCourse, teacher: event.target.value })} /></label><label>Salle<input value={newCourse.room} onChange={(event) => setNewCourse({ ...newCourse, room: event.target.value })} /></label></div><label>Année<select value={newCourse.year} onChange={(event) => setNewCourse({ ...newCourse, year: event.target.value as SchoolYear })}>{schoolYears.slice(0, 7).map((item) => <option key={item}>{item}</option>)}</select></label><footer><button onClick={() => setCreating(false)}>Annuler</button><button disabled={newCourse.title.trim().length < 2} onClick={createCourse}><Plus /> Créer le cahier</button></footer></section></div>}
+    {composerOpen && selected && <div className="overlay notebook-modal session-modal" onMouseDown={(event) => event.target === event.currentTarget && setComposerOpen(false)}><section><button className="close" onClick={() => setComposerOpen(false)}><X /></button><small>{selected.title}</small><h2>{draftId ? 'Modifier la séance' : 'Nouvelle séance'}</h2><div><label>Titre<input value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} autoFocus placeholder="Sujet du cours" /></label><label>Date<input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} /></label></div><CorrectableRichEditor value={draftContent} onChange={setDraftContent} placeholder="Écris tes notes de cours…" /><footer><button onClick={() => setComposerOpen(false)}>Annuler</button><button disabled={draftTitle.trim().length < 2 || richPlainText(draftContent).trim().length < 3} onClick={saveSession}>{draftId ? 'Enregistrer' : 'Ajouter au fil'}</button></footer></section></div>}
   </section>;
 }
 function TimelineView({ notes, open, edit }: { notes: Note[]; open: (note: Note) => void; edit: (note: Note) => void }) {
@@ -2822,7 +2900,7 @@ function Editor({
                 setD({ ...d, kind, status: statusesByKind[kind][0] });
               }}
             >
-              {Object.keys(icons).map((x) => (
+              {Object.keys(icons).filter((x) => x !== 'Cours').map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
