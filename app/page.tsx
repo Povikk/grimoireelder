@@ -319,7 +319,7 @@ const ruleAccent = (section: string) => ({
 }[section] || '#c4a34e');
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]),
-    [section, setSection] = useState('Accueil'),
+    [section, setSection] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('elderwood-active-section') || 'Accueil' : 'Accueil'),
     [q, setQ] = useState(''),
     [open, setOpen] = useState<Note | null>(null),
     [searchOpen, setSearchOpen] = useState<SearchDetail | null>(null),
@@ -354,6 +354,7 @@ export default function Home() {
   const [wikiDemoPending, setWikiDemoPending] = useState(true);
   const [visibleNoteLimit, setVisibleNoteLimit] = useState(10);
   const [navFlyout, setNavFlyout] = useState<'sheets' | 'organize' | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('elderwood-house-theme') as HouseTheme | null;
@@ -379,21 +380,27 @@ export default function Home() {
     }
     client.auth.getSession().then(({ data }) => {
       const user = data.session?.user || null;
+      currentUserIdRef.current = user?.id || null;
       setCurrentUser(user);
-      if (user) setSection('Toutes');
+      const rememberedSection = sessionStorage.getItem('elderwood-active-section');
+      if (user && (!rememberedSection || rememberedSection === 'Accueil')) setSection('Toutes');
+      if (!user && !['Accueil', 'Règlement', 'Lore', 'Elderwood'].includes(rememberedSection || '')) setSection('Accueil');
       setAuthResolved(true);
     }).catch(() => setAuthResolved(true));
     const { data } = client.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
+        const isNewLogin = currentUserIdRef.current !== session.user.id;
+        currentUserIdRef.current = session.user.id;
         setCurrentUser((existing) => {
           if (existing?.id === session.user.id) return existing;
           document.documentElement.classList.remove('grimoire-ready');
           setCloudReady(false);
           return session.user;
         });
-        setSection('Toutes');
+        if (isNewLogin) setSection('Toutes');
       }
       if (event === 'SIGNED_OUT') {
+        currentUserIdRef.current = null;
         setCloudReady(false);
         setCurrentUser(null);
         setSection('Accueil');
@@ -410,6 +417,9 @@ export default function Home() {
     });
     return () => data.subscription.unsubscribe();
   }, []);
+  useEffect(() => {
+    sessionStorage.setItem('elderwood-active-section', section);
+  }, [section]);
   useEffect(() => {
     if (!currentUser) {
       setCloudReady(false);
