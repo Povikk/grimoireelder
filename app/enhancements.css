@@ -3056,6 +3056,11 @@ html[data-theme] .side,
 
 /* Agenda hebdomadaire des cours. */
 .course-category-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px 8px 10px;border-bottom:1px solid #ffffff0d}
+.subject-rail>header{padding:15px 10px 11px 14px;text-transform:none;letter-spacing:0}
+.subject-rail>header>b{color:#dce4df;font:700 18px "Cormorant Garamond",Georgia,serif}
+.subject-rail>header>button{width:auto;height:31px;display:inline-flex;align-items:center;gap:5px;padding:0 8px;border-color:rgba(var(--house-rgb),.38);color:var(--house);font-size:8px;font-weight:800}
+.subject-rail>header>button svg{width:13px}
+.subject-rail>header>button span{display:inline;color:inherit;white-space:nowrap}
 .course-category-tabs>button{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:7px 7px;border:1px solid transparent;border-radius:7px;background:#ffffff025;color:#82958b;text-align:left;font-size:8px}
 .course-category-tabs>button span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .course-category-tabs>button em{min-width:17px;padding:2px 4px;border-radius:99px;background:#ffffff08;color:#71847b;font-size:7px;font-style:normal;text-align:center}
