@@ -9,7 +9,9 @@ import {
   Camera,
   Castle,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  Clock3,
   Compass,
   Dices,
   ImagePlus,
@@ -110,6 +112,7 @@ type Note = {
   courseTeacher?: string;
   courseRoom?: string;
   courseSessions?: { id: string; title: string; date: string; content: string }[];
+  courseSchedule?: { id: string; weekday: number; start: string; end: string }[];
   boardX?: number;
   boardY?: number;
   boardWidth?: number;
@@ -177,6 +180,7 @@ const demoCourse: Note = {
   schoolYear: 'Première année',
   courseTeacher: 'Professeur à renseigner',
   courseRoom: 'Salle des runes',
+  courseSchedule: [{ id: 'course-demo-schedule', weekday: 2, start: '18:00', end: '19:00' }],
   courseSessions: [
     {
       id: 'course-demo-session',
@@ -1719,7 +1723,8 @@ function LegacyCourseView({ user, courses, entries, update, add, remove, refresh
 }
 function CourseNotebookView({ user, courses, entries, update, add, remove, refreshShared }: { user: User; courses: Note[]; entries: WikiSubmission[]; update: (course: Note) => void; add: (course: Note) => void; remove: (course: Note) => void; refreshShared: () => Promise<void> }) {
   type Session = NonNullable<Note['courseSessions']>[number];
-  const [tab, setTab] = useState<'mine' | 'shared'>('mine');
+  type Schedule = NonNullable<Note['courseSchedule']>[number];
+  const [tab, setTab] = useState<'mine' | 'agenda' | 'shared'>('mine');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingCourse, setEditingCourse] = useState(false);
@@ -1732,10 +1737,26 @@ function CourseNotebookView({ user, courses, entries, update, add, remove, refre
   const [sharedOpen, setSharedOpen] = useState<WikiSubmission | null>(null);
   const [message, setMessage] = useState('');
   const [sharing, setSharing] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleCourseId, setScheduleCourseId] = useState('');
+  const [scheduleDraft, setScheduleDraft] = useState<Schedule>({ id: '', weekday: 1, start: '18:00', end: '19:00' });
   const [newCourse, setNewCourse] = useState({ title: '', teacher: '', room: '', year: 'Première année' as SchoolYear });
   const selected = courses.find((course) => course.id === selectedId) || null;
   const shared = entries.filter((entry) => entry.status === 'approved' && entry.section.startsWith('Cours ·'));
   const proposals = entries.filter((entry) => entry.created_by === user.id && entry.section.startsWith('Cours ·'));
+  const weekStart = useMemo(() => {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7) + weekOffset * 7);
+    return date;
+  }, [weekOffset]);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    return date;
+  }), [weekStart]);
+  const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   useEffect(() => {
     if (tab === 'mine' && !selectedId && courses.length) setSelectedId(courses[0].id);
     if (selectedId && !courses.some((course) => course.id === selectedId)) setSelectedId(courses[0]?.id || null);
@@ -1747,6 +1768,41 @@ function CourseNotebookView({ user, courses, entries, update, add, remove, refre
     setDraftContent(session?.content || '');
     setActionsOpen(null);
     setComposerOpen(true);
+  };
+  const openScheduledSession = (course: Note, date: Date) => {
+    const dateKey = localDateKey(date);
+    const existing = (course.courseSessions || []).find((session) => session.date === dateKey);
+    setSelectedId(course.id);
+    setTab('mine');
+    setDraftId(existing?.id || null);
+    setDraftTitle(existing?.title || `Cours du ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(date)}`);
+    setDraftDate(dateKey);
+    setDraftContent(existing?.content || '');
+    setActionsOpen(null);
+    setComposerOpen(true);
+  };
+  const editSchedule = (course?: Note, schedule?: Schedule) => {
+    const target = course || courses[0];
+    if (!target) { setMessage('Crée d’abord une matière pour ajouter un créneau.'); return; }
+    setScheduleCourseId(target.id);
+    setScheduleDraft(schedule ? { ...schedule } : { id: '', weekday: Math.max(1, new Date().getDay() || 7), start: '18:00', end: '19:00' });
+    setScheduleOpen(true);
+  };
+  const saveSchedule = () => {
+    const course = courses.find((item) => item.id === scheduleCourseId);
+    if (!course || !scheduleDraft.start || !scheduleDraft.end) return;
+    const schedule = { ...scheduleDraft, id: scheduleDraft.id || crypto.randomUUID() };
+    const current = course.courseSchedule || [];
+    update({ ...course, courseSchedule: scheduleDraft.id ? current.map((item) => item.id === scheduleDraft.id ? schedule : item) : [...current, schedule] });
+    setScheduleOpen(false);
+    setMessage(scheduleDraft.id ? 'Le créneau a été modifié.' : 'Le créneau a été ajouté à l’agenda.');
+  };
+  const deleteSchedule = () => {
+    const course = courses.find((item) => item.id === scheduleCourseId);
+    if (!course || !scheduleDraft.id) return;
+    update({ ...course, courseSchedule: (course.courseSchedule || []).filter((item) => item.id !== scheduleDraft.id) });
+    setScheduleOpen(false);
+    setMessage('Le créneau a été supprimé.');
   };
   const saveSession = () => {
     if (!selected || draftTitle.trim().length < 2 || richPlainText(draftContent).trim().length < 3) return;
@@ -1776,7 +1832,7 @@ function CourseNotebookView({ user, courses, entries, update, add, remove, refre
     finally { setSharing(null); }
   };
   return <section className="course-notebook-page">
-    <header className="notebook-heading"><div><small>CARNET SCOLAIRE PERSONNEL</small><h1>Mes cours</h1><p>Choisis une matière et écris directement dans son fil.</p></div><nav><button className={tab === 'mine' ? 'active' : ''} onClick={() => { setTab('mine'); setSharedOpen(null); }}><GraduationCap /> Mes matières</button><button className={tab === 'shared' ? 'active' : ''} onClick={() => setTab('shared')}><BookOpen /> Bibliothèque <span>{shared.length}</span></button></nav></header>
+    <header className="notebook-heading"><div><small>CARNET SCOLAIRE PERSONNEL</small><h1>Mes cours</h1><p>Choisis une matière et écris directement dans son fil.</p></div><nav><button className={tab === 'mine' ? 'active' : ''} onClick={() => { setTab('mine'); setSharedOpen(null); }}><GraduationCap /> Mes matières</button><button className={tab === 'agenda' ? 'active' : ''} onClick={() => { setTab('agenda'); setSharedOpen(null); }}><CalendarDays /> Agenda</button><button className={tab === 'shared' ? 'active' : ''} onClick={() => setTab('shared')}><BookOpen /> Bibliothèque <span>{shared.length}</span></button></nav></header>
     {message && <div className="notebook-toast"><Sparkles />{message}<button onClick={() => setMessage('')}><X /></button></div>}
     {tab === 'mine' && <div className="notebook-layout">
       <aside className="subject-rail"><header><b>Matières</b><button onClick={() => setCreating(true)} aria-label="Créer un cours"><Plus /></button></header><div>{courses.map((course) => <button className={selectedId === course.id ? 'active' : ''} onClick={() => { setSelectedId(course.id); setEditingCourse(false); }} key={course.id}><i><GraduationCap /></i><span><b>{course.title}</b><small>{course.courseSessions?.length || 0} séance{(course.courseSessions?.length || 0) !== 1 && 's'}</small></span></button>)}</div>{!courses.length && <p>Aucune matière pour le moment.</p>}</aside>
@@ -1786,10 +1842,16 @@ function CourseNotebookView({ user, courses, entries, update, add, remove, refre
         <div className="notebook-posts">{[...(selected.courseSessions || [])].reverse().map((session) => { const proposal = proposals.find((entry) => entry.title === session.title && entry.section === `Cours · ${selected.title}`); return <article key={session.id}><div className="post-date"><b>{session.date ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit' }).format(new Date(`${session.date}T12:00:00`)) : '•'}</b><small>{session.date ? new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(new Date(`${session.date}T12:00:00`)) : ''}</small></div><div className="post-paper"><header><div><h3>{session.title}</h3><small>{session.date ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(`${session.date}T12:00:00`)) : 'Sans date'}{proposal ? ` · ${proposal.status === 'pending' ? 'En validation' : proposal.status === 'approved' ? 'Publié' : 'Refusé'}` : ''}</small></div><button onClick={() => setActionsOpen(actionsOpen === session.id ? null : session.id)} aria-label="Actions"><MoreHorizontal /></button>{actionsOpen === session.id && <div className="post-menu"><button onClick={() => openComposer(session)}><Pencil /> Modifier</button><button disabled={sharing === session.id || proposal?.status === 'pending'} onClick={() => shareSession(selected, session)}><Share2 /> {proposal?.status === 'pending' ? 'En validation' : 'Partager'}</button><button onClick={() => { if (confirm('Supprimer cette séance ?')) update({ ...selected, courseSessions: selected.courseSessions?.filter((item) => item.id !== session.id) }); setActionsOpen(null); }}><Trash2 /> Supprimer</button></div>}</header><div className="rich-output" dangerouslySetInnerHTML={{ __html: safeRichHtml(session.content) }} /></div></article>; })}{!selected.courseSessions?.length && <div className="thread-empty"><BookOpen /><h3>Ce cahier est encore vide</h3><p>Ajoute la première séance de ce cours.</p></div>}</div>
       </> : <div className="thread-empty"><GraduationCap /><h3>Crée ta première matière</h3><p>Elle apparaîtra ici comme un nouveau cahier.</p><button onClick={() => setCreating(true)}><Plus /> Nouveau cours</button></div>}</main>
     </div>}
+    {tab === 'agenda' && <section className="course-agenda">
+      <header className="agenda-toolbar"><div><small>SEMAINE DU {new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(weekStart).toUpperCase()}</small><h2>Agenda des cours</h2><p>Prépare tes cours et ouvre une séance directement au bon endroit.</p></div><div><button onClick={() => setWeekOffset((value) => value - 1)} aria-label="Semaine précédente"><ChevronLeft /></button><button className="agenda-today" onClick={() => setWeekOffset(0)}>Aujourd’hui</button><button onClick={() => setWeekOffset((value) => value + 1)} aria-label="Semaine suivante"><ChevronRight /></button><button className="agenda-add" onClick={() => editSchedule()}><Plus /> Ajouter un créneau</button></div></header>
+      <div className="agenda-week">{weekDays.map((date, dayIndex) => { const events = courses.flatMap((course) => (course.courseSchedule || []).filter((schedule) => schedule.weekday === dayIndex + 1).map((schedule) => ({ course, schedule }))).sort((a, b) => a.schedule.start.localeCompare(b.schedule.start)); const today = localDateKey(date) === localDateKey(new Date()); return <article className={today ? 'today' : ''} key={localDateKey(date)}><header><small>{new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(date).replace('.', '')}</small><b>{date.getDate()}</b></header><div>{events.map(({ course, schedule }) => <section className="agenda-event" key={`${course.id}-${schedule.id}`}><button className="agenda-event-main" onClick={() => openScheduledSession(course, date)}><span><Clock3 /> {schedule.start} à {schedule.end}</span><b>{course.title}</b><small>{[course.courseRoom, course.courseTeacher].filter(Boolean).join(' · ') || 'Informations à compléter'}</small><em>Ouvrir la séance <ChevronRight /></em></button><button className="agenda-event-edit" onClick={() => editSchedule(course, schedule)} aria-label={`Modifier le créneau ${course.title}`}><Pencil /></button></section>)}{!events.length && <span className="agenda-free">Libre</span>}</div></article>; })}</div>
+      {!courses.some((course) => course.courseSchedule?.length) && <div className="agenda-empty"><CalendarDays /><b>Ton emploi du temps est encore vide</b><p>Ajoute un créneau récurrent à l’une de tes matières.</p><button onClick={() => editSchedule()}><Plus /> Ajouter le premier créneau</button></div>}
+    </section>}
     {tab === 'shared' && !sharedOpen && <div className="notebook-library">{shared.map((entry) => <button onClick={() => setSharedOpen(entry)} key={entry.id}><i><BookOpen /></i><span><small>{entry.section.replace('Cours · ', '')}</small><b>{entry.title}</b><p>{entry.subtitle}</p></span><ChevronRight /></button>)}{!shared.length && <div className="thread-empty"><BookOpen /><h3>Aucun cours partagé</h3><p>Les séances acceptées par la modération apparaîtront ici.</p></div>}</div>}
     {tab === 'shared' && sharedOpen && <article className="notebook-shared-reader"><button onClick={() => setSharedOpen(null)}>← Retour à la bibliothèque</button><small>{sharedOpen.section.replace('Cours · ', '')}</small><h2>{sharedOpen.title}</h2>{sharedOpen.subtitle && <h3>{sharedOpen.subtitle}</h3>}<div>{sharedOpen.content}</div>{sharedOpen.source && <footer>{sharedOpen.source}</footer>}</article>}
     {creating && createPortal(<div className="overlay notebook-modal" onMouseDown={(event) => event.target === event.currentTarget && setCreating(false)}><section><button className="close" onClick={() => setCreating(false)}><X /></button><small>NOUVEAU CAHIER</small><h2>Créer une matière</h2><label>Nom du cours<input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} autoFocus placeholder="Ex. Potions" /></label><div><label>Enseignant ou enseignante<input value={newCourse.teacher} onChange={(event) => setNewCourse({ ...newCourse, teacher: event.target.value })} /></label><label>Salle<input value={newCourse.room} onChange={(event) => setNewCourse({ ...newCourse, room: event.target.value })} /></label></div><label>Année<select value={newCourse.year} onChange={(event) => setNewCourse({ ...newCourse, year: event.target.value as SchoolYear })}>{schoolYears.slice(0, 7).map((item) => <option key={item}>{item}</option>)}</select></label><footer><button onClick={() => setCreating(false)}>Annuler</button><button disabled={newCourse.title.trim().length < 2} onClick={createCourse}><Plus /> Créer le cahier</button></footer></section></div>, document.body)}
     {composerOpen && selected && createPortal(<div className="overlay notebook-modal session-modal" onMouseDown={(event) => event.target === event.currentTarget && setComposerOpen(false)}><section><button className="close" onClick={() => setComposerOpen(false)}><X /></button><small>{selected.title}</small><h2>{draftId ? 'Modifier la séance' : 'Nouvelle séance'}</h2><div><label>Titre<input value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} autoFocus placeholder="Sujet du cours" /></label><label>Date<input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} /></label></div><CorrectableRichEditor value={draftContent} onChange={setDraftContent} placeholder="Écris tes notes de cours…" /><footer><button onClick={() => setComposerOpen(false)}>Annuler</button><button disabled={draftTitle.trim().length < 2 || richPlainText(draftContent).trim().length < 3} onClick={saveSession}>{draftId ? 'Enregistrer' : 'Ajouter au fil'}</button></footer></section></div>, document.body)}
+    {scheduleOpen && createPortal(<div className="overlay notebook-modal schedule-modal" onMouseDown={(event) => event.target === event.currentTarget && setScheduleOpen(false)}><section><button className="close" onClick={() => setScheduleOpen(false)}><X /></button><small>AGENDA DES COURS</small><h2>{scheduleDraft.id ? 'Modifier le créneau' : 'Nouveau créneau'}</h2><label>Matière<select value={scheduleCourseId} disabled={!!scheduleDraft.id} onChange={(event) => setScheduleCourseId(event.target.value)}>{courses.map((course) => <option value={course.id} key={course.id}>{course.title}</option>)}</select></label><label>Jour<select value={scheduleDraft.weekday} onChange={(event) => setScheduleDraft({ ...scheduleDraft, weekday: Number(event.target.value) })}>{['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map((day, index) => <option value={index + 1} key={day}>{day}</option>)}</select></label><div><label>Début<input type="time" value={scheduleDraft.start} onChange={(event) => setScheduleDraft({ ...scheduleDraft, start: event.target.value })} /></label><label>Fin<input type="time" value={scheduleDraft.end} onChange={(event) => setScheduleDraft({ ...scheduleDraft, end: event.target.value })} /></label></div><footer>{scheduleDraft.id && <button className="schedule-delete" onClick={deleteSchedule}><Trash2 /> Supprimer</button>}<button onClick={() => setScheduleOpen(false)}>Annuler</button><button disabled={!scheduleDraft.start || !scheduleDraft.end || scheduleDraft.end <= scheduleDraft.start} onClick={saveSchedule}>{scheduleDraft.id ? 'Enregistrer' : 'Ajouter à l’agenda'}</button></footer></section></div>, document.body)}
   </section>;
 }
 function TimelineView({ notes, open, edit }: { notes: Note[]; open: (note: Note) => void; edit: (note: Note) => void }) {

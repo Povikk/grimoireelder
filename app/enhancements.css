@@ -3053,3 +3053,52 @@ html[data-theme] .side,
 
 @media(max-width:760px){.notebook-thread{padding-bottom:17px}.thread-heading{align-items:flex-start;flex-wrap:wrap}.thread-actions{width:100%}.quick-session-top{flex:1}.notebook-modal{padding:10px!important}}
 @media(max-width:480px){.notebook-settings{grid-template-columns:1fr}.notebook-heading nav button{white-space:nowrap}.post-paper{padding:13px}.notebook-posts>article{grid-template-columns:1fr}.post-date{width:max-content;height:auto;display:flex;gap:3px;padding:5px 8px}.post-date b{font-size:11px}.post-date small{font-size:8px}}
+
+/* Agenda hebdomadaire des cours. */
+.course-agenda{position:relative;overflow:hidden;border:1px solid rgba(var(--house-rgb),.25);border-radius:16px;background:linear-gradient(145deg,#0b1c18,#081511);box-shadow:0 18px 45px #0003}
+.agenda-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:19px 21px;border-bottom:1px solid #ffffff11;background:radial-gradient(circle at 82% 12%,rgba(var(--house-rgb),.11),transparent 30%)}
+.agenda-toolbar small{color:var(--house);font-size:8px;font-weight:800;letter-spacing:.15em}
+.agenda-toolbar h2{margin:3px 0 1px;font:700 27px "Cormorant Garamond",Georgia,serif}
+.agenda-toolbar p{margin:0;color:#81948a;font-size:11px}
+.agenda-toolbar>div:last-child{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.agenda-toolbar button{height:36px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:1px solid #ffffff16;border-radius:8px;background:#ffffff05;color:#aab9b1;font-size:10px;font-weight:700}
+.agenda-toolbar button:hover{border-color:rgba(var(--house-rgb),.42);color:#fff}
+.agenda-toolbar button svg{width:15px}
+.agenda-toolbar button:not(.agenda-today):not(.agenda-add){width:36px;padding:0}
+.agenda-toolbar .agenda-add{margin-left:5px;border-color:rgba(var(--house-rgb),.45);background:rgba(var(--house-rgb),.13);color:#eeeadd}
+.agenda-week{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));min-height:400px}
+.agenda-week>article{min-width:0;border-right:1px solid #ffffff0d;background:linear-gradient(180deg,#ffffff015,transparent 24%)}
+.agenda-week>article:last-child{border-right:0}
+.agenda-week>article.today{background:linear-gradient(180deg,rgba(var(--house-rgb),.105),rgba(var(--house-rgb),.025) 45%,transparent)}
+.agenda-week>article>header{height:62px;display:flex;align-items:center;justify-content:center;gap:7px;border-bottom:1px solid #ffffff0d;color:#84968d}
+.agenda-week>article>header small{text-transform:uppercase;font-size:9px;font-weight:800;letter-spacing:.08em}
+.agenda-week>article>header b{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:#d9e1dc;font:700 16px "Cormorant Garamond",Georgia,serif}
+.agenda-week>article.today>header small{color:var(--house)}
+.agenda-week>article.today>header b{background:var(--house);color:#07120f}
+.agenda-week>article>div{display:grid;align-content:start;gap:8px;min-height:338px;padding:9px}
+.agenda-event{position:relative;overflow:hidden;border:1px solid rgba(var(--house-rgb),.26);border-left:3px solid var(--house);border-radius:9px;background:linear-gradient(140deg,rgba(var(--house-rgb),.11),#0c1c18);box-shadow:0 8px 20px #0002}
+.agenda-event-main{width:100%;display:grid;gap:4px;padding:10px 27px 10px 10px;border:0;background:transparent;color:#dce4df;text-align:left}
+.agenda-event-main>span{display:flex;align-items:center;gap:4px;color:var(--house);font-size:8px;font-weight:800}
+.agenda-event-main>span svg{width:11px}
+.agenda-event-main>b{overflow:hidden;text-overflow:ellipsis;font:700 15px "Cormorant Garamond",Georgia,serif;white-space:nowrap}
+.agenda-event-main>small{min-height:24px;color:#81938a;font-size:8px;line-height:1.4}
+.agenda-event-main>em{display:flex;align-items:center;gap:3px;margin-top:3px;color:#aebdb5;font-size:8px;font-style:normal;font-weight:700}
+.agenda-event-main>em svg{width:10px}
+.agenda-event:hover{border-color:rgba(var(--house-rgb),.52);transform:translateY(-1px);box-shadow:0 10px 23px #0004,0 0 16px rgba(var(--house-rgb),.08)}
+.agenda-event-edit{position:absolute;right:4px;top:4px;width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:6px;background:#ffffff05;color:#788b81}
+.agenda-event-edit:hover{background:#ffffff0d;color:var(--house)}
+.agenda-event-edit svg{width:12px}
+.agenda-free{display:block;padding:15px 4px;color:#52655c;font-size:9px;text-align:center}
+.agenda-empty{position:absolute;left:50%;top:62%;display:grid;justify-items:center;gap:6px;padding:18px 22px;border:1px dashed rgba(var(--house-rgb),.28);border-radius:12px;background:#091713e8;color:#9aaba2;text-align:center;transform:translate(-50%,-50%);box-shadow:0 15px 35px #0006}
+.agenda-empty>svg{width:25px;color:var(--house)}
+.agenda-empty>b{color:#dfe6e2;font:700 18px "Cormorant Garamond",Georgia,serif}
+.agenda-empty p{margin:0;font-size:10px}
+.agenda-empty button{display:flex;align-items:center;gap:5px;margin-top:5px;padding:8px 10px;border:1px solid rgba(var(--house-rgb),.38);border-radius:8px;background:rgba(var(--house-rgb),.1);color:#e5e8df;font-size:10px}
+.agenda-empty button svg{width:14px}
+.schedule-modal>section{width:min(520px,100%)}
+.schedule-modal footer{align-items:center}
+.schedule-modal footer .schedule-delete{margin-right:auto;border-color:#b85d5155;color:#d98b80}
+.schedule-modal footer .schedule-delete svg{width:14px}
+
+@media(max-width:1050px){.agenda-week{overflow-x:auto;grid-template-columns:repeat(7,150px)}.agenda-toolbar{align-items:flex-start;flex-direction:column}.agenda-toolbar>div:last-child{width:100%}.agenda-toolbar .agenda-add{margin-left:auto}}
+@media(max-width:560px){.agenda-toolbar{padding:16px}.agenda-toolbar>div:last-child{flex-wrap:wrap}.agenda-toolbar .agenda-today{flex:1}.agenda-toolbar .agenda-add{width:100%;margin:2px 0 0}.agenda-week{grid-template-columns:repeat(7,142px)}.agenda-week>article>div{min-height:300px}.schedule-modal footer{flex-wrap:wrap}.schedule-modal footer .schedule-delete{width:100%;margin:0 0 3px}}
